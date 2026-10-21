@@ -409,7 +409,7 @@
       <table class="entry-table">
         <thead>
           <tr>
-            <th>产区</th><th>处理法</th><th>等级</th>
+            <th>产区</th><th>等级</th><th>处理法</th>
             <th class="num">成交价</th><th class="num">缺陷率 %（可不填）</th><th></th>
           </tr>
         </thead>
@@ -1421,8 +1421,8 @@
     $("deal-body").innerHTML = state.deals.map((deal, i) => (
       "<tr data-index=\"" + i + "\">" +
       "<td class=\"wide\" data-label=\"产区\">" + choiceRow("region", E.REGIONS, deal.region) + "</td>" +
-      "<td class=\"wide\" data-label=\"处理法\">" + choiceRow("process", E.PROCESSES, deal.process) + "</td>" +
       "<td class=\"wide\" data-label=\"等级\">" + fieldControl("grade", "等级", grades, deal.grade) + "</td>" +
+      "<td class=\"wide\" data-label=\"处理法\">" + choiceRow("process", E.PROCESSES, deal.process) + "</td>" +
       "<td data-label=\"成交价\"><input data-field=\"price\" inputmode=\"decimal\" value=\"" + esc(deal.price) + "\"></td>" +
       "<td data-label=\"缺陷率 %（可不填）\"><input data-field=\"defect\" inputmode=\"decimal\" value=\"" + esc(defectInput(deal.defect)) + "\" placeholder=\"可不填\"></td>" +
       "<td><button class=\"ghost tiny\" data-remove type=\"button\">删除</button></td></tr>"
