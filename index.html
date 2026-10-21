@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-page="view">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -355,19 +355,24 @@
     #result details.fold { border: 0; background: transparent; }
     #result details.fold > summary::after { content: none; }
   }
+  html[data-page="view"] #entry,
+  html[data-page="view"] .mobile-bar,
+  html[data-page="view"] .entry-only { display: none !important; }
+  html[data-page="view"] main { padding-bottom: 28px; }
+  a.quiet { color: var(--accent); }
 </style>
 </head>
 <body>
 <header class="masthead">
   <div class="kicker">上海自贸区咖啡交易中心 · YCPI v3 · 直接价格法</div>
   <h1>云南咖啡价格指数</h1>
-  <p class="lede">每天贴入一份成交，按计算方法说明的六层口径，算出综合价、等级 / 产区 / 处理法分项、9 个标准品、涨跌幅和 ICE 价差。单位是元/公斤，不设基期，也不做季节调整。</p>
+  <p class="lede" id="lede">每天贴入一份成交，按计算方法说明的六层口径，算出综合价、等级 / 产区 / 处理法分项、9 个标准品、涨跌幅和 ICE 价差。单位是元/公斤，不设基期，也不做季节调整。</p>
 </header>
 <main>
   <details class="panel fold no-print" id="entry" open>
     <summary><span class="fold-title">当日成交</span><span class="fold-extra" id="entry-extra"></span></summary>
     <div class="fold-body">
-    <p class="hint">权重按文档里的产量结构，不按当天成交量。等级由你按 DB53/T 149 填写，工具不会用缺陷率自动定级。缺陷率可写 4、4% 或 0.04。</p>
+    <p class="hint">权重按文档里的产量结构，不按当天成交量。等级由你按 DB53/T 149 填写，工具不会用缺陷率自动定级。缺陷率可写 4、4% 或 0.04。提交后到 <a class="quiet" href="https://cxl19910724.github.io/ycpi/">展示页</a> 查看。</p>
     <div class="meta">
       <label>发布日期<input id="pub-date" type="date"></label>
       <label>汇率（人民币 / 美元）
@@ -381,7 +386,7 @@
       <label class="check"><input id="carry" type="checkbox" checked> 缺失样本按文档补齐</label>
     </div>
     <div class="actions">
-      <button class="primary" id="calc" type="button">计算并保存</button>
+      <button class="primary" id="calc" type="button">提交</button>
       <button class="ghost" id="load-sample" type="button">载入文档示例</button>
       <button class="ghost" id="add-row" type="button">添加一行</button>
       <button class="ghost" id="toggle-paste" type="button">粘贴表格</button>
@@ -409,6 +414,12 @@
       </table>
     </div>
     <p class="status" id="status"></p>
+    <p class="hint" id="after-submit"></p>
+    <details id="publish-box">
+      <summary>让别人打开链接也能看到</summary>
+      <p class="hint">同一台手机或电脑上，提交后打开展示页就能看到。别人的手机要看到，需要在这里填一次 GitHub 个人访问令牌，权限只勾这个仓库的 Contents 读写。口令只留在这台浏览器里，不会出现在展示页。</p>
+      <label>发布口令<input id="publish-token" type="password" autocomplete="off" placeholder="github_pat_…"></label>
+    </details>
     <details>
       <summary>年度参数（默认取自 v3 文档，可改）</summary>
       <div class="params" id="params"></div>
@@ -422,9 +433,9 @@
   <details class="panel fold" id="saved" open>
     <summary><span class="fold-title">已保存的发布日</span><span class="fold-extra" id="saved-extra"></span></summary>
     <div class="fold-body">
-    <p class="hint">先计算并保存。点某一天的「查看」，再打开这一期的发布结果。记录存在这台浏览器里，换电脑前请导出备份。</p>
+    <p class="hint" id="saved-hint">提交后保存在这台浏览器。点「载入」改那一天，再提交覆盖。</p>
     <div id="history"></div>
-    <div class="actions no-print">
+    <div class="actions no-print entry-only">
       <button class="ghost" id="export-archive" type="button">导出备份</button>
       <button class="ghost" id="import-archive" type="button">导入备份</button>
       <button class="ghost" id="clear-history" type="button">清空发布记录</button>
@@ -435,7 +446,7 @@
 
   <section class="panel" id="result" hidden></section>
 
-  <details class="panel">
+  <details class="panel entry-only">
     <summary>方法摘要与产季背景（不进入每日发布）</summary>
     <div class="formula" style="margin-top:12px">第 1 层  标准价 = 成交价 × (1 − α × 标准缺陷率) / (1 − α × 实际缺陷率)
 第 2 层  个体标准价 = 标准价（元/公斤，不除基期）
@@ -456,7 +467,7 @@
   </details>
   <footer id="foot"></footer>
   <div class="mobile-bar no-print">
-    <button class="primary" id="calc-mobile" type="button">计算并保存</button>
+    <button class="primary" id="calc-mobile" type="button">提交</button>
   </div>
   <div id="picker" class="picker" hidden>
     <button type="button" class="picker-backdrop" id="picker-close" aria-label="关闭选项"></button>
@@ -1212,7 +1223,12 @@
 <script>
 (function () {
   const E = globalThis.YCPIEngine;
+  const PAGE = document.documentElement.dataset.page === "view" ? "view" : "entry";
   const STORAGE_KEY = "ycpi-price-tool-v3";
+  const TOKEN_KEY = "ycpi-publish-token";
+  const REPO_API = "https://api.github.com/repos/cxl19910724/ycpi/contents/releases.json";
+  const VIEW_PAGE = "https://cxl19910724.github.io/ycpi/";
+  const ENTRY_PAGE = "https://cxl19910724.github.io/ycpi/entry.html";
   const state = {
     deals: [blankDeal()],
     result: null,
@@ -1282,7 +1298,77 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveStore, 200);
   }
-  function setStatus(text) { $("status").textContent = text; }
+  function setStatus(text, link) {
+    const status = $("status");
+    if (status) status.textContent = text || "";
+    const more = $("after-submit");
+    if (!more) return;
+    more.innerHTML = link ? '<a class="quiet" href="' + esc(link) + '">打开展示页</a>' : "";
+  }
+  function viewHref(date) {
+    if (location.protocol === "file:") return VIEW_PAGE + (date ? "?date=" + encodeURIComponent(date) : "");
+    const url = new URL("./", location.href);
+    if (date) url.searchParams.set("date", date);
+    return url.href;
+  }
+  function utf8Base64(text) {
+    const bytes = new TextEncoder().encode(text);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function readToken() {
+    try { return localStorage.getItem(TOKEN_KEY) || ""; }
+    catch (err) { return ""; }
+  }
+  async function hydrateRemote() {
+    if (location.protocol === "file:") return;
+    try {
+      const res = await fetch(new URL("releases.json?t=" + Date.now(), location.href), { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!Array.isArray(data.history)) return;
+      const map = new Map();
+      for (const item of state.history) if (item && item.date) map.set(item.date, item);
+      for (const item of data.history) {
+        if (!item || !item.date) continue;
+        const prev = map.get(item.date);
+        if (!prev || String(item.savedAt || "") >= String(prev.savedAt || "")) map.set(item.date, item);
+      }
+      state.history = [...map.values()].sort((a, b) => a.date.localeCompare(b.date));
+    } catch (err) { /* 展示文件还没有，或当前网络读不到 */ }
+  }
+  async function publishHistory() {
+    const token = readToken();
+    if (!token) return "local";
+    const payload = JSON.stringify({ version: 1, updated: new Date().toISOString(), history: state.history });
+    const headers = {
+      Authorization: "Bearer " + token,
+      Accept: "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let sha;
+      const got = await fetch(REPO_API, { headers, cache: "no-store" });
+      if (got.ok) sha = (await got.json()).sha;
+      else if (got.status === 401 || got.status === 403) return "denied";
+      else if (got.status !== 404) return "error";
+      const put = await fetch(REPO_API, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({
+          message: "Update YCPI releases",
+          content: utf8Base64(payload),
+          sha
+        })
+      });
+      if (put.ok) return "remote";
+      if (put.status === 401 || put.status === 403) return "denied";
+      if (put.status !== 409) return "error";
+    }
+    return "error";
+  }
   function isNarrow() { return window.matchMedia("(max-width: 720px)").matches; }
   function options(codes, extra) {
     const head = extra ? '<option value="">' + extra + "</option>" : "";
@@ -1442,7 +1528,7 @@
       "<details class=\"fold\"><summary><span class=\"fold-title\">" + esc(title) + "</span><span class=\"fold-extra\">" + esc(extra || "") + "</span></summary><div class=\"fold-body\">" + body + "</div></details>"
     );
     box.innerHTML = (
-      "<h2>发布结果<button class=\"fold-toggle no-print\" id=\"close-result\" type=\"button\">收起</button></h2><p class=\"hint\">" + esc(result.date) + " · 直接价格法 · 未做季节调整</p>" +
+      "<h2>发布结果" + (PAGE === "view" ? "" : "<button class=\"fold-toggle no-print\" id=\"close-result\" type=\"button\">收起</button>") + "</h2><p class=\"hint\">" + esc(result.date) + " · 直接价格法 · 未做季节调整</p>" +
       banners.join("") +
       "<div class=\"hero\"><div><div class=\"kicker\" style=\"color:var(--muted)\">YCPI 综合价</div><div class=\"hero-price\" data-testid=\"ycpi\">" + E.formatCny(result.ycpi) + "</div><div class=\"unit\">元 / 公斤</div></div>" +
       "<div class=\"stats\">" +
@@ -1519,13 +1605,15 @@
     if (note) note.textContent = state.history.length ? state.history.length + " 期" : "还没有";
     const rows = [...state.history].sort((a, b) => a.date.localeCompare(b.date));
     if (!rows.length) {
-      $("history").innerHTML = "<p class=\"hint\">还没有保存的发布日。计算一次之后，这里会留下综合价走势。</p>";
+      $("history").innerHTML = "<p class=\"hint\">" + (PAGE === "view" ? "还没有提交的发布数据。" : "还没有提交。提交一次之后，这里会留下综合价走势。") + "</p>";
       return;
     }
     const chart = rows.length >= 2 ? renderChart(rows) : "";
     const viewing = state.result && state.result.date;
     const body = [...rows].reverse().map((item) => (
-      "<tr" + (item.date === viewing ? " class=\"is-open\"" : "") + "><td data-label=\"发布日\">" + esc(item.date) + "</td><td class=\"num\" data-label=\"综合价\">" + E.formatCny(item.ycpi) + "</td><td class=\"num\" data-label=\"环比\">" + (item.chain == null ? "—" : E.formatChange(item.chain)) + "</td><td class=\"num\" data-label=\"ICE 价差\">" + (item.spread == null ? "—" : E.formatSigned(item.spread, 3)) + "</td><td class=\"num\" data-label=\"覆盖率\">" + E.formatWeight(item.quality.coverage) + "</td><td><button class=\"ghost tiny\" data-open=\"" + esc(item.date) + "\" type=\"button\">查看</button> <button class=\"ghost tiny\" data-drop=\"" + esc(item.date) + "\" type=\"button\">删除</button></td></tr>"
+      "<tr" + (item.date === viewing ? " class=\"is-open\"" : "") + "><td data-label=\"发布日\">" + esc(item.date) + "</td><td class=\"num\" data-label=\"综合价\">" + E.formatCny(item.ycpi) + "</td><td class=\"num\" data-label=\"环比\">" + (item.chain == null ? "—" : E.formatChange(item.chain)) + "</td><td class=\"num\" data-label=\"ICE 价差\">" + (item.spread == null ? "—" : E.formatSigned(item.spread, 3)) + "</td><td class=\"num\" data-label=\"覆盖率\">" + E.formatWeight(item.quality.coverage) + "</td><td>" + (PAGE === "view"
+        ? "<button class=\"ghost tiny\" data-open=\"" + esc(item.date) + "\" type=\"button\">查看</button>"
+        : "<button class=\"ghost tiny\" data-open=\"" + esc(item.date) + "\" type=\"button\">载入</button> <button class=\"ghost tiny\" data-drop=\"" + esc(item.date) + "\" type=\"button\">删除</button>") + "</td></tr>"
     )).join("");
     $("history").innerHTML = chart + "<div class=\"table-scroll\"><table class=\"history-table\"><thead><tr><th>发布日</th><th class=\"num\">综合价</th><th class=\"num\">环比</th><th class=\"num\">ICE 价差</th><th class=\"num\">覆盖率</th><th></th></tr></thead><tbody>" + body + "</tbody></table></div>";
   }
@@ -1569,9 +1657,10 @@
       return "<text x=\"" + x(i) + "\" y=\"" + (height - 12) + "\" text-anchor=\"middle\">" + row.date.slice(5) + "</text>";
     }).join("");
     const legend = series.map(([name, color]) => "<span><i class=\"swatch\" style=\"background:" + color + "\"></i>" + name + "</span>").join("");
-    return "<h3 class=\"subhead\">已保存发布日的价格</h3><svg viewBox=\"0 0 " + width + " " + height + "\" width=\"100%\" role=\"img\" aria-label=\"YCPI 综合价与等级分项价\">" + grid + paths + labels + "<text x=\"" + left + "\" y=\"12\">元/公斤</text></svg><div class=\"legend\">" + legend + "</div><p class=\"hint\">横轴是发布日期，纵轴是元/公斤。来源是本机已保存的计算结果，未做季节调整。</p>";
+    return "<h3 class=\"subhead\">已发布的价格</h3><svg viewBox=\"0 0 " + width + " " + height + "\" width=\"100%\" role=\"img\" aria-label=\"YCPI 综合价与等级分项价\">" + grid + paths + labels + "<text x=\"" + left + "\" y=\"12\">元/公斤</text></svg><div class=\"legend\">" + legend + "</div><p class=\"hint\">横轴是发布日期，纵轴是元/公斤。来源是已提交的计算结果，未做季节调整。</p>";
   }
-  function calculate() {
+  async function calculate() {
+    if (PAGE === "view") return;
     readParams();
     const date = $("pub-date").value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { setStatus("请先选择发布日期。"); return; }
@@ -1594,6 +1683,7 @@
     result.deals = E.clone(state.deals);
     result.fxNote = $("fx-note").textContent;
     result.iceNote = $("ice-note").textContent;
+    result.savedAt = new Date().toISOString();
     state.history = history.concat(result).sort((a, b) => a.date.localeCompare(b.date));
     state.result = null;
     $("result").hidden = true;
@@ -1602,9 +1692,18 @@
     renderHistory();
     $("entry").open = false;
     $("saved").open = true;
+    const priceText = E.formatCny(result.ycpi);
+    setStatus("正在提交 " + date + "，综合价 " + priceText + " 元/公斤…");
+    let published = "local";
+    try { published = await publishHistory(); }
+    catch (err) { published = "error"; }
+    const link = viewHref(date);
+    if (published === "remote") setStatus("已提交 " + date + "，综合价 " + priceText + " 元/公斤。别人打开链接大约一分钟后能看到。", link);
+    else if (published === "denied") setStatus("已保存在这台浏览器，综合价 " + priceText + " 元/公斤。发布口令无效，别人的手机还看不到。", link);
+    else if (published === "error") setStatus("已保存在这台浏览器，综合价 " + priceText + " 元/公斤。展示页文件这次没有写上。", link);
+    else setStatus("已提交 " + date + "，综合价 " + priceText + " 元/公斤。这台浏览器的展示页现在就能看。", link);
     const saved = document.querySelector("#history button[data-open=\"" + date + "\"]");
     if (saved) saved.closest("tr").scrollIntoView({ behavior: "smooth", block: "center" });
-    setStatus("已保存 " + date + "，综合价 " + E.formatCny(result.ycpi) + " 元/公斤。点这一天的「查看」打开发布结果。");
   }
   function download(name, text, type) {
     const blob = new Blob([text], { type });
@@ -1617,16 +1716,30 @@
   function openHistory(date) {
     const item = state.history.find((row) => row.date === date);
     if (!item) return;
-    $("pub-date").value = item.date;
-    $("fx").value = item.fx || "";
-    $("ice").value = item.ice || "";
-    state.deals = item.deals && item.deals.length ? E.clone(item.deals) : [blankDeal()];
+    if (PAGE === "entry") {
+      $("pub-date").value = item.date;
+      $("fx").value = item.fx || "";
+      $("ice").value = item.ice || "";
+      $("fx-note").textContent = item.fxNote || "";
+      $("ice-note").textContent = item.iceNote || "";
+      state.deals = item.deals && item.deals.length ? E.clone(item.deals) : [blankDeal()];
+      state.result = null;
+      $("result").hidden = true;
+      $("result").innerHTML = "";
+      renderTable();
+      renderHistory();
+      $("entry").open = true;
+      $("entry").scrollIntoView({ behavior: "smooth", block: "start" });
+      setStatus("已载入 " + date + " 的成交。改完后重新提交。");
+      return;
+    }
     state.result = item;
-    renderTable();
     renderHistory();
     renderResult(item);
+    const url = new URL(location.href);
+    url.searchParams.set("date", date);
+    history.replaceState(null, "", url);
     $("result").scrollIntoView({ behavior: "smooth", block: "start" });
-    setStatus("正在查看 " + date + " 的发布结果。改完成交后请重新计算。");
   }
   $("deal-body").addEventListener("input", (e) => {
     const tr = e.target.closest("tr");
@@ -1813,8 +1926,8 @@
     $("carry").checked = true;
     state.deals = E.buildSampleDeals();
     renderTable();
-    calculate();
-    setStatus("已载入文档示例。精品豆按普洱 63 元、缺陷率 4% 还原后，分项价应为 65.72 元/公斤。点这一天的「查看」打开发布结果。");
+    scheduleSave();
+    setStatus("已载入文档示例。精品豆按普洱 63 元、缺陷率 4% 还原后，分项价应为 65.72 元/公斤。确认后点「提交」。");
   };
   $("reset-params").onclick = () => { state.params = E.clone(E.DEFAULT_PARAMS); paramFields(); saveStore(); setStatus("参数已恢复为 v3 文档默认值。"); };
   $("params").addEventListener("input", () => { readParams(); scheduleSave(); });
@@ -1858,16 +1971,16 @@
       download("YCPI-" + state.result.date + ".csv", "\uFEFF" + state.result.bulletin.replace(/\n/g, "\r\n"), "text/csv;charset=utf-8");
     } else if (e.target.id === "print") window.print();
   });
-  $("history").addEventListener("click", (e) => {
+  $("history").addEventListener("click", async (e) => {
     const openBtn = e.target.closest("[data-open]");
     if (openBtn) openHistory(openBtn.dataset.open);
     const dropBtn = e.target.closest("[data-drop]");
-    if (dropBtn) {
-      state.history = state.history.filter((item) => item.date !== dropBtn.dataset.drop);
-      if (state.result && state.result.date === dropBtn.dataset.drop) { state.result = null; $("result").hidden = true; $("result").innerHTML = ""; }
-      saveStore();
-      renderHistory();
-    }
+    if (!dropBtn || PAGE === "view") return;
+    state.history = state.history.filter((item) => item.date !== dropBtn.dataset.drop);
+    if (state.result && state.result.date === dropBtn.dataset.drop) { state.result = null; $("result").hidden = true; $("result").innerHTML = ""; }
+    saveStore();
+    renderHistory();
+    try { await publishHistory(); } catch (err) { /* 本地已删除，远端失败时下次提交会再同步 */ }
   });
   $("export-archive").onclick = () => download("YCPI备份.json", JSON.stringify({ version: 1, params: state.params, history: state.history }, null, 2), "application/json");
   $("import-archive").onclick = () => $("archive-file").click();
@@ -1875,7 +1988,7 @@
     const file = $("archive-file").files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const data = JSON.parse(String(reader.result || ""));
         const incoming = Array.isArray(data.history) ? data.history : [];
@@ -1886,27 +1999,46 @@
         paramFields();
         saveStore();
         renderHistory();
+        try { await publishHistory(); } catch (err) { /* 合并已在本地，远端下次提交再同步 */ }
         setStatus("已合并 " + incoming.length + " 个发布日。同一天以文件为准。");
       } catch (err) { setStatus("这个文件不是 YCPI 备份。"); }
     };
     reader.readAsText(file, "utf-8");
     $("archive-file").value = "";
   };
-  $("clear-history").onclick = () => {
+  $("clear-history").onclick = async () => {
     if (!confirm("清空这台浏览器里的全部 YCPI 发布记录？")) return;
     state.history = [];
     state.result = null;
     $("result").hidden = true;
     saveStore();
     renderHistory();
+    try { await publishHistory(); } catch (err) { /* 本地已清空 */ }
   };
   document.addEventListener("keydown", (e) => {
+    if (PAGE === "view") return;
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") calculate();
   });
+  const tokenInput = $("publish-token");
+  if (tokenInput) {
+    if (readToken()) tokenInput.placeholder = "已保存，输入新口令才会替换";
+    tokenInput.addEventListener("change", () => {
+      const value = tokenInput.value.trim();
+      if (!value) return;
+      try { localStorage.setItem(TOKEN_KEY, value); }
+      catch (err) { setStatus("这台浏览器不能保存发布口令。"); return; }
+      tokenInput.value = "";
+      tokenInput.placeholder = "已保存，输入新口令才会替换";
+      setStatus("发布口令已保存在这台浏览器。下次提交会写到展示页。");
+    });
+  }
 
   try {
     const sample = E.selfTest();
-    $("foot").textContent = "口径自检已通过：63 元还原为 63.66；精品示例 " + E.formatCny(sample.grades.SP.price) + "；综合价 " + E.formatCny(sample.ycpi) + "。数据只保存在这台浏览器。";
+    const note = "口径自检已通过：63 元还原为 63.66；精品示例 " + E.formatCny(sample.grades.SP.price) + "；综合价 " + E.formatCny(sample.ycpi) + "。";
+    $("foot").innerHTML = PAGE === "view"
+      ? note + " 本页只展示已提交的数据。 <a class=\"quiet\" href=\"" + ENTRY_PAGE + "\">录入</a>"
+      : note + " <a class=\"quiet\" href=\"" + VIEW_PAGE + "\">展示页</a>";
   } catch (err) {
     $("foot").innerHTML = "<span class=\"banner bad\">口径自检没有通过：" + esc(err.message) + "</span>";
   }
@@ -1914,9 +2046,29 @@
   catch (err) { state.storage = false; }
   loadStore();
   if (!$("pub-date").value) $("pub-date").value = todayISO();
+  if (PAGE === "view") {
+    $("lede").textContent = "这里只展示已经提交的指数：综合价、分项、价差和发布稿。不能录入或修改成交。";
+    const savedTitle = document.querySelector("#saved .fold-title");
+    if (savedTitle) savedTitle.textContent = "已发布";
+    if ($("saved-hint")) $("saved-hint").textContent = "点某一天的「查看」切换这一期。";
+    document.querySelector("main").insertBefore($("result"), $("saved"));
+  } else if ($("lede")) {
+    $("lede").textContent = "在这里录入当天成交并提交。综合价和发布稿在展示页查看。单位是元/公斤，不设基期，也不做季节调整。";
+  }
   paramFields();
   renderTable();
-  renderHistory();
+  (async function init() {
+    await hydrateRemote();
+    if (PAGE === "view") {
+      const wanted = new URLSearchParams(location.search).get("date");
+      const item = state.history.find((row) => row.date === wanted) || state.history[state.history.length - 1] || null;
+      if (item) {
+        state.result = item;
+        renderResult(item);
+      }
+    }
+    renderHistory();
+  })();
 })();
 </script>
 </body>
