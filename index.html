@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>YCPI 价格工具</title>
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #e6dfd2;
+    --sheet: #f7f3eb;
+    --ink: #1e1914;
+    --muted: #6f6256;
+    --line: #ddd3c4;
+    --accent: #7c2f27;
+    --accent-soft: #f3e4de;
+    --good: #1b6640;
+    --good-soft: #e6f2ea;
+    --warn: #8a5610;
+    --warn-soft: #f8efdc;
+    --bad: #8d2e2e;
+    --bad-soft: #f8e6e3;
+    --info: #243e5c;
+    --serif: "Iowan Old Style", Palatino, "Palatino Linotype", "Songti SC", "Noto Serif SC", serif;
+    --sans: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+    --mono: "SF Mono", ui-monospace, "Source Code Pro", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+  p { margin: 0; }
+  .masthead { background: var(--ink); color: #f4efe6; padding: 28px 32px 24px; }
+  .kicker { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #d9c7b6; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 8px 0 6px; }
+  .lede { max-width: 760px; color: #e6dccf; }
+  main { max-width: 1180px; margin: 0 auto; padding: 22px 20px 48px; }
+  .panel { background: var(--sheet); border: 1px solid var(--line); padding: 18px; margin-bottom: 16px; }
+  .panel h2 { font-size: 22px; margin-bottom: 4px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 4px 0 14px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+  .row > label { flex: 1 1 180px; min-width: 0; }
+  .row > label input, .row > label select { width: 100%; max-width: 100%; min-width: 0; }
+  .fx-line { display: flex; gap: 8px; align-items: stretch; }
+  .row > label .fx-line input { width: auto; flex: 1 1 auto; min-width: 0; }
+  .fx-line button { flex: 0 0 auto; white-space: nowrap; }
+  .fx-note { min-height: 1.2em; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  label.check { flex-direction: row; align-items: center; gap: 8px; min-height: 44px; color: var(--ink); font-size: 15px; }
+  label.check input { width: 18px; height: 18px; margin: 0; }
+  input, select, textarea {
+    background: #fffdf8;
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    border-radius: 2px;
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  textarea { width: 100%; min-height: 140px; font-family: var(--mono); font-size: 12px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  button.primary { background: var(--accent); color: #fffaf6; border: 1px solid var(--accent); padding: 9px 14px; border-radius: 2px; }
+  button.ghost { background: transparent; border: 1px solid var(--line); padding: 8px 12px; border-radius: 2px; }
+  .history-table tr.is-open td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  .status { min-height: 1.4em; color: var(--info); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: middle; }
+  th { color: var(--muted); font-size: 12px; font-weight: 600; }
+  .num, td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); }
+  .scroll, .table-scroll { max-width: 100%; overflow: auto; }
+  .scroll { max-height: 420px; border: 1px solid var(--line); }
+  .table-scroll { -webkit-overflow-scrolling: touch; }
+  .scroll table { background: #fffdf8; }
+  .entry-table select, .entry-table input { width: 100%; min-width: 88px; padding: 6px 8px; }
+  .hero { display: grid; grid-template-columns: minmax(220px, 1.1fr) 2fr; gap: 18px; align-items: start; }
+  .hero-price { font-family: var(--serif); font-size: 68px; line-height: 0.9; letter-spacing: -0.04em; }
+  .unit { color: var(--muted); margin-top: 6px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stat { border: 1px solid var(--line); padding: 10px 12px; background: #fffdf8; }
+  .stat span { display: block; color: var(--muted); font-size: 12px; }
+  .stat b { display: block; margin-top: 2px; font-size: 20px; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .up { color: var(--good); }
+  .down { color: var(--accent); }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+  .grid-2 { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 12px; }
+  .subhead { font-size: 16px; margin: 16px 0 8px; }
+  .banner { padding: 10px 12px; margin: 10px 0; border-left: 3px solid var(--warn); background: var(--warn-soft); }
+  .banner.bad { border-color: var(--bad); background: var(--bad-soft); }
+  .banner.good { border-color: var(--good); background: var(--good-soft); }
+  .tag { display: inline-block; padding: 1px 6px; border: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  details { margin-top: 10px; }
+  summary { cursor: pointer; font-weight: 600; }
+  #result h2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  details.fold:not([open]) > .fold-body { display: none; }
+  details.fold > summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 12px 14px;
+    min-height: 48px;
+  }
+  details.fold > summary::-webkit-details-marker { display: none; }
+  details.fold > summary::marker { content: ""; }
+  details.fold .fold-title { flex: 0 0 auto; }
+  details.fold .fold-extra {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 400;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  details.fold > summary::after {
+    flex: 0 0 auto;
+    content: "展开";
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  details.fold[open] > summary::after { content: "收起"; }
+  .fold-toggle {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--accent);
+    min-height: 0;
+    line-height: 1.4;
+  }
+  .fold-toggle:hover { background: transparent; color: var(--accent); }
+  #result h2 .fold-toggle { margin-left: auto; }
+  #result details.fold { border: 1px solid var(--line); background: #fffdf8; margin-top: 10px; }
+  #result details.fold .fold-body { padding: 0 12px 12px; }
+  details.panel.fold { padding: 0; }
+  details.panel.fold > summary { padding: 16px 18px; }
+  details.panel.fold[open] > summary { border-bottom: 1px solid var(--line); }
+  details.panel.fold > .fold-body { padding: 0 18px 18px; }
+  .formula { font-family: var(--mono); font-size: 12.5px; background: #fffdf8; border: 1px solid var(--line); padding: 10px 12px; white-space: pre-wrap; }
+  .params { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 12px; margin-top: 8px; }
+  .params h3 { grid-column: 1 / -1; font-size: 15px; margin-top: 8px; }
+  .sum { font-size: 12px; color: var(--muted); }
+  .sum.off { color: var(--bad); }
+  svg text { fill: var(--muted); font-size: 11px; font-family: var(--sans); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .swatch { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; }
+  footer { color: var(--muted); font-size: 12px; padding-top: 8px; }
+  .strike { text-decoration: line-through; color: var(--muted); }
+  .mobile-bar { display: none; }
+  button.picker-field {
+    width: 100%;
+    min-height: 44px;
+    text-align: left;
+    background: #fffdf8;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 8px 32px 8px 10px;
+    position: relative;
+  }
+  button.picker-field::after {
+    content: "";
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid var(--muted);
+    border-bottom: 1.5px solid var(--muted);
+    transform: translateY(-70%) rotate(45deg);
+  }
+  .picker { position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-end; justify-content: center; }
+  .picker[hidden] { display: none; }
+  .picker-backdrop { position: absolute; inset: 0; background: rgba(30, 25, 20, 0.45); border: 0; padding: 0; }
+  .picker-panel {
+    position: relative;
+    width: min(520px, 100%);
+    max-height: min(70vh, 520px);
+    overflow: auto;
+    background: #fffdf8;
+    padding: 8px 8px calc(12px + env(safe-area-inset-bottom));
+  }
+  .picker-title { padding: 12px 12px 8px; color: var(--muted); font-size: 13px; }
+  button.picker-option {
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 12px;
+    font-size: 16px;
+  }
+  button.picker-option[aria-selected="true"] { color: var(--accent); font-weight: 600; }
+  @media (max-width: 860px) {
+    .masthead { padding: 20px 16px 18px; }
+    h1 { font-size: 30px; }
+    .lede { font-size: 14px; }
+    main { padding: 14px 12px 32px; }
+    .panel { padding: 14px; }
+    details.panel.fold > summary,
+    details.panel.fold > .fold-body { padding-left: 14px; padding-right: 14px; }
+    details.panel.fold > .fold-body { padding-bottom: 14px; }
+    .hero, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+    .stats, .params { grid-template-columns: 1fr 1fr; }
+    .hero-price { font-size: 56px; }
+    .params h3 { margin-top: 12px; }
+  }
+  @media (max-width: 720px) {
+    body { -webkit-text-size-adjust: 100%; }
+    .masthead { padding: 18px 14px 16px; padding-top: calc(18px + env(safe-area-inset-top)); }
+    .kicker { letter-spacing: 0.02em; line-height: 1.4; }
+    h1 { font-size: 28px; }
+    main { padding: 12px 10px calc(84px + env(safe-area-inset-bottom)); }
+    .panel { padding: 12px; }
+    details.panel.fold > summary { padding: 14px 12px; }
+    details.panel.fold > .fold-body { padding: 0 12px 12px; }
+    .row > label { flex-basis: 100%; }
+    input, select, textarea { font-size: 16px; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; }
+    #calc { display: none; }
+    .actions .primary { grid-column: 1 / -1; }
+    .actions button, button.primary, button.ghost { min-height: 44px; }
+    .mobile-bar {
+      display: block;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 5;
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      background: var(--sheet);
+      border-top: 1px solid var(--line);
+    }
+    .mobile-bar .primary { width: 100%; min-height: 48px; }
+    .entry-scroll { max-height: none; overflow: visible; border: 0; }
+    .entry-table, .entry-table tbody { display: block; }
+    .entry-table thead { display: none; }
+    .entry-table tr {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 10px;
+      margin: 0 0 10px;
+      padding: 10px;
+      background: #fffdf8;
+      border: 1px solid var(--line);
+    }
+    .entry-table td { display: block; border: 0; padding: 0; min-width: 0; }
+    .entry-table td::before {
+      content: attr(data-label);
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .entry-table td:last-child { grid-column: 1 / -1; }
+    .entry-table td:last-child::before { content: none; }
+    .entry-table select, .entry-table input { min-width: 0; min-height: 44px; }
+    .entry-table .tiny { width: 100%; min-height: 40px; font-size: 14px; }
+    .weight-table thead, .log-table thead, .history-table thead { display: none; }
+    .weight-table, .weight-table tbody, .log-table, .log-table tbody, .history-table, .history-table tbody { display: block; }
+    .weight-table tr, .log-table tr, .history-table tr {
+      display: block;
+      margin: 0 0 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .weight-table td, .log-table td, .history-table td {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border: 0;
+      padding: 3px 0;
+      text-align: left;
+    }
+    .weight-table td::before, .log-table td::before, .history-table td::before {
+      content: attr(data-label);
+      color: var(--muted);
+      font-family: var(--sans);
+    }
+    .weight-table td:first-child, .log-table td:first-child {
+      display: block;
+      font-weight: 600;
+      padding-bottom: 4px;
+    }
+    .weight-table td:first-child::before, .log-table td:first-child::before { content: none; }
+    .history-table td:last-child { display: flex; gap: 8px; }
+    .history-table td:last-child::before { content: none; }
+    .history-table .tiny { flex: 1; min-height: 40px; font-size: 14px; }
+    #result details.fold > .fold-body { padding: 8px 14px 14px; }
+    #result details.fold .scroll,
+    #result details.fold .table-scroll {
+      max-height: none;
+      overflow: visible;
+      border: 0;
+    }
+    #result .log-table tr,
+    #result .weight-table tr {
+      margin: 0;
+      padding: 12px 0 10px;
+    }
+    #result .log-table tr:last-child,
+    #result .weight-table tr:last-child {
+      border-bottom: 0;
+      padding-bottom: 2px;
+    }
+    #result .log-table td,
+    #result .weight-table td { padding: 6px 0; }
+    .hero-price { font-size: 52px; }
+    .stat b { font-size: 18px; }
+    .formula { font-size: 12px; overflow-wrap: anywhere; }
+  }
+  @media print {
+    body { background: white; }
+    .masthead { color: black; background: white; padding: 0 0 12px; }
+    .no-print { display: none !important; }
+    .panel { break-inside: avoid; }
+    #result details.fold { border: 0; background: transparent; }
+    #result details.fold > summary::after { content: none; }
+  }
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div class="kicker">上海自贸区咖啡交易中心 · YCPI v3 · 直接价格法</div>
+  <h1>云南咖啡价格指数</h1>
+  <p class="lede">每天贴入一份成交，按计算方法说明的六层口径，算出综合价、等级 / 产区 / 处理法分项、9 个标准品、涨跌幅和 ICE 价差。单位是元/公斤，不设基期，也不做季节调整。</p>
+</header>
+<main>
+  <details class="panel fold no-print" id="entry" open>
+    <summary><span class="fold-title">当日成交</span><span class="fold-extra" id="entry-extra"></span></summary>
+    <div class="fold-body">
+    <p class="hint">权重按文档里的产量结构，不按当天成交量。等级由你按 DB53/T 149 填写，工具不会用缺陷率自动定级。缺陷率可写 4、4% 或 0.04。</p>
+    <div class="row">
+      <label>发布日期<input id="pub-date" type="date"></label>
+      <label>汇率（人民币 / 美元）
+        <span class="fx-line"><input id="fx" inputmode="decimal" placeholder="7.20"><button class="ghost" id="fetch-fx" type="button">取中间价</button></span>
+        <span class="fx-note hint" id="fx-note"></span>
+      </label>
+      <label>ICE Coffee C（美元 / 磅）
+        <span class="fx-line"><input id="ice" inputmode="decimal" placeholder="3.50"><button class="ghost" id="fetch-ice" type="button">取报价</button></span>
+        <span class="fx-note hint" id="ice-note"></span>
+      </label>
+      <label class="check"><input id="carry" type="checkbox" checked> 缺失样本按文档补齐</label>
+    </div>
+    <div class="actions">
+      <button class="primary" id="calc" type="button">计算并保存</button>
+      <button class="ghost" id="load-sample" type="button">载入文档示例</button>
+      <button class="ghost" id="add-row" type="button">添加一行</button>
+      <button class="ghost" id="toggle-paste" type="button">粘贴表格</button>
+      <button class="ghost" id="import-csv" type="button">导入 CSV</button>
+      <button class="ghost" id="template" type="button">下载模板</button>
+      <button class="ghost" id="clear-rows" type="button">清空表格</button>
+      <input id="csv-file" type="file" accept=".csv,text/csv" hidden>
+    </div>
+    <div id="paste-box" hidden>
+      <textarea id="paste" placeholder="从 Excel 复制，包含表头：产区、等级、处理法、成交方式、成交价、缺陷率"></textarea>
+      <div class="actions">
+        <button class="primary" id="apply-paste" type="button">写入表格</button>
+        <button class="ghost" id="cancel-paste" type="button">取消</button>
+      </div>
+    </div>
+    <div class="scroll entry-scroll">
+      <table class="entry-table">
+        <thead>
+          <tr>
+            <th>产区</th><th>等级</th><th>处理法</th><th>成交方式</th>
+            <th class="num">成交价</th><th class="num">缺陷率 %</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="deal-body"></tbody>
+      </table>
+    </div>
+    <p class="status" id="status"></p>
+    <details>
+      <summary>年度参数（默认取自 v3 文档，可改）</summary>
+      <div class="params" id="params"></div>
+      <div class="actions">
+        <button class="ghost" id="reset-params" type="button">恢复文档默认</button>
+      </div>
+    </details>
+  </div>
+  </details>
+
+  <details class="panel fold" id="saved" open>
+    <summary><span class="fold-title">已保存的发布日</span><span class="fold-extra" id="saved-extra"></span></summary>
+    <div class="fold-body">
+    <p class="hint">先计算并保存。点某一天的「查看」，再打开这一期的发布结果。记录存在这台浏览器里，换电脑前请导出备份。</p>
+    <div id="history"></div>
+    <div class="actions no-print">
+      <button class="ghost" id="export-archive" type="button">导出备份</button>
+      <button class="ghost" id="import-archive" type="button">导入备份</button>
+      <button class="ghost" id="clear-history" type="button">清空发布记录</button>
+      <input id="archive-file" type="file" accept="application/json,.json" hidden>
+    </div>
+    </div>
+  </details>
+
+  <section class="panel" id="result" hidden></section>
+
+  <details class="panel">
+    <summary>方法摘要与产季背景（不进入每日发布）</summary>
+    <div class="formula" style="margin-top:12px">第 1 层  标准价 = 成交价 × (1 − α × 标准缺陷率) / (1 − α × 实际缺陷率)
+第 2 层  个体标准价 = 标准价（元/公斤，不除基期）
+第 3 层  分项平均价 = 样本标准价按产量权重加权
+第 4 层  综合价 = 50% 等级 + 35% 产区 + 15% 处理法
+第 5 层  不做季节调整
+第 6 层  美元/磅 = 综合价 / 汇率 / 2.2046；价差 = 美元/磅 − ICE</div>
+    <h3 class="subhead">产季日历（背景，每年看一次）</h3>
+    <table>
+      <thead><tr><th>月份</th><th>阶段</th><th>价格特征</th></tr></thead>
+      <tbody>
+        <tr><td>10–11 月</td><td>产季开始</td><td>鲜果集中采摘，价格开始下行</td></tr>
+        <tr><td>12–次年 2 月</td><td>产季高峰</td><td>集中上市，价格低位</td></tr>
+        <tr><td>3–4 月</td><td>产季尾声</td><td>上市量减少，价格回升</td></tr>
+        <tr><td>5–9 月</td><td>非产季</td><td>库存交易为主，价格偏高</td></tr>
+      </tbody>
+    </table>
+  </details>
+  <footer id="foot"></footer>
+  <div class="mobile-bar no-print">
+    <button class="primary" id="calc-mobile" type="button">计算并保存</button>
+  </div>
+  <div id="picker" class="picker" hidden>
+    <button type="button" class="picker-backdrop" id="picker-close" aria-label="关闭选项"></button>
+    <div class="picker-panel" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+      <div class="picker-title" id="picker-title"></div>
+      <div id="picker-options"></div>
+    </div>
+  </div>
+</main>
+<script id="ycpi-engine">
+(function () {
+  const REGIONS = ["PE", "LC", "DH", "BS", "OT"];
+  const GRADES = ["SP", "PR", "CM"];
+  const PROCESSES = ["WA", "NA", "HO"];
+  const SOURCES = ["purchase", "listed", "auction"];
+  const GRADE8 = ["SP1", "SP2", "SP3", "PR1", "PR2", "CM1", "CM2", "CM3"];
+  const PARENT = { SP1: "SP", SP2: "SP", SP3: "SP", PR1: "PR", PR2: "PR", CM1: "CM", CM2: "CM", CM3: "CM" };
+  const LABEL = {
+    PE: "普洱", LC: "临沧", DH: "德宏", BS: "保山", OT: "其他",
+    SP: "精品豆", PR: "优质豆", CM: "商业豆",
+    SP1: "精品一级", SP2: "精品二级", SP3: "精品三级",
+    PR1: "优质一级", PR2: "优质二级",
+    CM1: "商业一级", CM2: "商业二级", CM3: "商业三级",
+    WA: "水洗", NA: "日晒", HO: "蜜处理",
+    purchase: "产区收购", listed: "挂牌协商", auction: "拍卖",
+    grade: "等级分项", region: "产区分项", process: "处理法分项"
+  };
+
+  const DEFAULT_PARAMS = {
+    alpha: { SP: 1, PR: 0.8, CM: 0.5 },
+    dStd: { SP: 0.03, PR: 0.05, CM: 0.08 },
+    rejectAbove: { SP: 0.3, PR: 0.3, CM: 0.25 },
+    gradeWeight: { SP: 0.3, PR: 0.2, CM: 0.5 },
+    regionWeight: { PE: 0.42, LC: 0.27, DH: 0.18, BS: 0.12, OT: 0.01 },
+    regionGradeWeight: {
+      PE: { SP: 0.35, PR: 0.22, CM: 0.43 },
+      LC: { SP: 0.25, PR: 0.18, CM: 0.57 },
+      DH: { SP: 0.22, PR: 0.18, CM: 0.6 },
+      BS: { SP: 0.32, PR: 0.22, CM: 0.46 },
+      OT: { SP: 0.2, PR: 0.18, CM: 0.62 }
+    },
+    processWeight: { WA: 0.7, NA: 0.2, HO: 0.1 },
+    layerWeight: { grade: 0.5, region: 0.35, process: 0.15 },
+    sourceWeight: { purchase: 0.7, listed: 0.2, auction: 0.1 },
+    tcWeight: { listed: 0.7, auction: 0.3 },
+    grade8Weight: { SP1: 0.02, SP2: 0.05, SP3: 0.23, PR1: 0.1, PR2: 0.1, CM1: 0.2, CM2: 0.18, CM3: 0.12 },
+    kgPerLb: 2.2046
+  };
+
+  function clone(v) { return JSON.parse(JSON.stringify(v)); }
+  function roundTo(n, d) {
+    const f = 10 ** d;
+    return Math.round((n + Number.EPSILON) * f) / f;
+  }
+  function formatCny(n) { return n == null || !isFinite(n) ? "—" : roundTo(n, 2).toFixed(2); }
+  function formatUsd(n) { return n == null || !isFinite(n) ? "—" : roundTo(n, 3).toFixed(3); }
+  function formatSigned(n, d) {
+    if (n == null || !isFinite(n)) return "—";
+    const v = roundTo(n, d);
+    const body = Math.abs(v).toFixed(d);
+    if (v > 0) return "+" + body;
+    if (v < 0) return "−" + body;
+    return (0).toFixed(d);
+  }
+  function formatChange(x) {
+    if (x == null || !isFinite(x)) return "—";
+    return formatSigned(x * 100, 2) + "%";
+  }
+  function formatWeight(w) {
+    if (w == null || !isFinite(w)) return "—";
+    const p = w * 100;
+    const text = Math.abs(p - Math.round(p)) < 0.05 ? String(Math.round(p)) : p.toFixed(1);
+    return text + "%";
+  }
+  function avg(list) { return list.reduce((s, n) => s + n, 0) / list.length; }
+  function parseNumber(value) {
+    if (typeof value === "number") return value;
+    if (value == null || String(value).trim() === "") return NaN;
+    let s = String(value).trim().replace(/元|人民币|美元|\/公斤|\/磅/g, "").replace(/\s/g, "");
+    if (/^\d+,\d{1,2}$/.test(s)) s = s.replace(",", ".");
+    else s = s.replace(/,/g, "");
+    return parseFloat(s);
+  }
+  function parseDefect(value) {
+    if (value == null || value === "") return null;
+    if (typeof value === "number") {
+      if (!isFinite(value)) return NaN;
+      return value > 1 ? value / 100 : value;
+    }
+    const raw = String(value).trim();
+    if (!raw) return null;
+    const pct = /%|％/.test(raw);
+    const n = parseFloat(raw.replace(/%|％/g, ""));
+    if (!isFinite(n)) return NaN;
+    return pct || n > 1 ? n / 100 : n;
+  }
+  function parseRegion(value) {
+    const s = String(value ?? "").trim().toLowerCase();
+    const map = { pe: "PE", "普洱": "PE", "puer": "PE", "pu'er": "PE", lc: "LC", "临沧": "LC", lincang: "LC", dh: "DH", "德宏": "DH", dehong: "DH", bs: "BS", "保山": "BS", baoshan: "BS", ot: "OT", "其他": "OT", "其它": "OT", other: "OT" };
+    return map[s] || null;
+  }
+  function parseGrade(value) {
+    const s = String(value ?? "").trim().toLowerCase();
+    const map = {
+      sp: "SP", "精品": "SP", "精品豆": "SP",
+      pr: "PR", "优质": "PR", "优质豆": "PR",
+      cm: "CM", "商业": "CM", "商业豆": "CM",
+      sp1: "SP1", "精品一级": "SP1", "精品1级": "SP1",
+      sp2: "SP2", "精品二级": "SP2", "精品2级": "SP2",
+      sp3: "SP3", "精品三级": "SP3", "精品3级": "SP3",
+      pr1: "PR1", "优质一级": "PR1", "优质1级": "PR1",
+      pr2: "PR2", "优质二级": "PR2", "优质2级": "PR2",
+      cm1: "CM1", "商业一级": "CM1", "商业1级": "CM1",
+      cm2: "CM2", "商业二级": "CM2", "商业2级": "CM2",
+      cm3: "CM3", "商业三级": "CM3", "商业3级": "CM3"
+    };
+    return map[s] || null;
+  }
+  function parseProcess(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) return { value: null };
+    const s = raw.toLowerCase();
+    const map = { wa: "WA", "水洗": "WA", washed: "WA", na: "NA", "日晒": "NA", natural: "NA", ho: "HO", "蜜处理": "HO", "蜜": "HO", honey: "HO" };
+    const valueFound = map[s] || map[raw];
+    return valueFound ? { value: valueFound } : { error: "无法识别处理法" };
+  }
+  function parseSource(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) return { value: "purchase", defaulted: true };
+    const s = raw.toLowerCase();
+    const map = {
+      purchase: "purchase", "产区收购": "purchase", "收购": "purchase", "产区": "purchase",
+      listed: "listed", "挂牌协商": "listed", "挂牌": "listed",
+      auction: "auction", "拍卖": "auction", "拍卖成交": "auction"
+    };
+    const found = map[s] || map[raw];
+    return found ? { value: found } : { error: "无法识别成交方式" };
+  }
+  function parentOf(grade) { return PARENT[grade] || grade; }
+  function childrenOf(parent) { return GRADE8.filter((code) => PARENT[code] === parent); }
+  function standardPrice(price, defect, dStd, alpha) {
+    return price * (1 - alpha * dStd) / (1 - alpha * defect);
+  }
+  function dealFromStandard(standard, defect, dStd, alpha) {
+    return standard * (1 - alpha * defect) / (1 - alpha * dStd);
+  }
+  function weighted(parts) {
+    const specified = (parts || []).filter((p) => p && p.weight > 0);
+    const usable = specified.filter((p) => p.price != null && isFinite(p.price));
+    const sumUsed = usable.reduce((s, p) => s + p.weight, 0);
+    if (!(sumUsed > 0)) return null;
+    const detailed = usable.map((p) => ({
+      code: p.code,
+      price: p.price,
+      weight: p.weight,
+      effectiveWeight: p.weight / sumUsed,
+      contribution: p.price * p.weight / sumUsed
+    }));
+    return {
+      price: detailed.reduce((s, p) => s + p.contribution, 0),
+      parts: detailed,
+      renormalized: usable.length !== specified.length
+    };
+  }
+  function blendSources(bySource, params) {
+    const present = SOURCES.filter((k) => bySource[k] != null && isFinite(bySource[k]));
+    let weights = params.sourceWeight;
+    let method = "采集源权重 70/20/10";
+    if (bySource.purchase == null && bySource.listed != null && bySource.auction != null) {
+      weights = { listed: params.tcWeight.listed, auction: params.tcWeight.auction };
+      method = "仅交易中心成交，挂牌/拍卖按 70/30";
+    }
+    const blended = weighted(present.map((k) => ({ code: k, price: bySource[k], weight: weights[k] || 0 })));
+    return blended ? { ...blended, method } : null;
+  }
+  function mergeParams(input) {
+    const base = clone(DEFAULT_PARAMS);
+    if (!input) return base;
+    for (const key of Object.keys(base)) {
+      if (input[key] == null) continue;
+      if (typeof base[key] === "number") base[key] = Number(input[key]);
+      else {
+        for (const sub of Object.keys(base[key])) {
+          const node = input[key][sub];
+          if (node == null) continue;
+          if (typeof base[key][sub] === "number") base[key][sub] = Number(node);
+          else if (node && typeof node === "object") {
+            for (const leaf of Object.keys(base[key][sub])) {
+              if (node[leaf] != null) base[key][sub][leaf] = Number(node[leaf]);
+            }
+          }
+        }
+      }
+    }
+    return base;
+  }
+  function emptyRow(raw) {
+    if (!raw) return true;
+    return [raw.region, raw.grade, raw.process, raw.source, raw.price, raw.defect]
+      .every((v) => v == null || String(v).trim() === "");
+  }
+  function normalizeDeal(raw, index) {
+    if (emptyRow(raw)) return { skip: true, index };
+    const region = parseRegion(raw.region);
+    const grade = parseGrade(raw.grade);
+    const process = parseProcess(raw.process);
+    const source = parseSource(raw.source);
+    const price = parseNumber(raw.price);
+    const defect = parseDefect(raw.defect);
+    const row = { index, region: raw.region, grade: raw.grade, process: raw.process, source: raw.source, price, defect };
+    if (!region) return { ...row, error: "无法识别产区" };
+    if (!grade) return { ...row, error: "无法识别等级" };
+    if (process.error) return { ...row, error: process.error };
+    if (source.error) return { ...row, error: source.error };
+    if (!(price > 0)) return { ...row, error: "成交价需大于 0" };
+    if (defect != null && (!(defect >= 0) || defect >= 1)) return { ...row, error: "缺陷率无效" };
+    return {
+      index, region, grade, process: process.value, source: source.value, sourceDefaulted: !!source.defaulted,
+      price, defect, parent: parentOf(grade)
+    };
+  }
+  function shiftMonth(ym, delta) {
+    const [y, m] = ym.split("-").map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+    return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0");
+  }
+  function monthAverage(rows) {
+    const nums = rows.map((r) => r.ycpi).filter((n) => n != null && isFinite(n));
+    return nums.length ? avg(nums) : null;
+  }
+  function buildSampleDeals() {
+    const matrix = {
+      SP: { defect: 0.03, special: { PE: 0.04 }, prices: { PE: 63, LC: 66.2, DH: 68.5, BS: 67.8, OT: 64 } },
+      PR: { defect: 0.05, omit: { BS: true }, prices: { PE: 56, LC: 54, DH: 53, BS: 55, OT: 52 } },
+      CM: { defect: 0.08, prices: { PE: 42, LC: 40, DH: 39, BS: 41, OT: 38 } }
+    };
+    const deals = [];
+    for (const grade of GRADES) {
+      for (const region of REGIONS) {
+        for (const process of PROCESSES) {
+          const spec = matrix[grade];
+          deals.push({
+            region, grade, process, source: "purchase",
+            price: spec.prices[region],
+            defect: spec.omit && spec.omit[region] ? null : (spec.special && spec.special[region] != null ? spec.special[region] : spec.defect)
+          });
+        }
+      }
+    }
+    deals.push({ region: "PE", grade: "SP", process: "WA", source: "auction", price: 120, defect: 0.03 });
+    return deals;
+  }
+  function splitLine(line, delim) {
+    const out = [];
+    let cur = "";
+    let quoted = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') {
+        if (quoted && line[i + 1] === '"') { cur += '"'; i++; }
+        else quoted = !quoted;
+      } else if (c === delim && !quoted) { out.push(cur.trim()); cur = ""; }
+      else cur += c;
+    }
+    out.push(cur.trim());
+    return out;
+  }
+  function parseTable(text) {
+    const lines = String(text || "").replace(/^\uFEFF/, "").split(/\r?\n/).filter((l) => l.trim());
+    if (!lines.length) return { deals: [], errors: ["没有读到内容"] };
+    const delim = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
+    const header = splitLine(lines[0], delim);
+    const keys = ["region", "grade", "process", "source", "price", "defect"];
+    const aliases = {
+      region: ["产区", "地区", "region"],
+      grade: ["等级", "级别", "grade"],
+      process: ["处理法", "加工", "process"],
+      source: ["成交方式", "来源", "采集源", "source"],
+      price: ["成交价", "价格", "price"],
+      defect: ["缺陷率", "缺陷", "defect"]
+    };
+    const indexOf = {};
+    const headerHit = header.some((cell) => Object.values(aliases).some((names) => names.includes(cell.trim().toLowerCase()) || names.includes(cell.trim())));
+    if (headerHit) {
+      header.forEach((cell, i) => {
+        const name = cell.trim().toLowerCase();
+        for (const key of keys) {
+          if (aliases[key].includes(cell.trim()) || aliases[key].includes(name)) indexOf[key] = i;
+        }
+      });
+    } else {
+      keys.forEach((key, i) => { indexOf[key] = i; });
+    }
+    const start = headerHit ? 1 : 0;
+    const deals = [];
+    const errors = [];
+    for (let i = start; i < lines.length; i++) {
+      const cells = splitLine(lines[i], delim);
+      if (cells.every((c) => !c)) continue;
+      const deal = {};
+      for (const key of keys) deal[key] = indexOf[key] == null ? "" : cells[indexOf[key]] || "";
+      const norm = normalizeDeal(deal, i + 1);
+      if (norm.skip) continue;
+      if (norm.error) errors.push("第 " + (i + 1) + " 行：" + norm.error);
+      else deals.push(deal);
+    }
+    return { deals, errors };
+  }
+  function compute(input) {
+    const params = mergeParams(input.params);
+    const previous = input.previous || null;
+    const history = input.history || [];
+    const carryOn = input.carryForward !== false;
+    const notes = [];
+    const reviews = [];
+    const rejected = [];
+    const dealRows = [];
+    const kept = [];
+    let submitted = 0;
+    let auctionSubmitted = 0;
+    (input.deals || []).forEach((raw, index) => {
+      const deal = normalizeDeal(raw, index);
+      if (deal.skip) return;
+      submitted += 1;
+      if (deal.source === "auction" || parseSource(raw.source).value === "auction") auctionSubmitted += 1;
+      if (deal.error) {
+        rejected.push({ ...deal, note: deal.error });
+        dealRows.push({ ...deal, status: "剔除", note: deal.error });
+        return;
+      }
+      const spec = params.alpha[deal.parent] == null ? null : {
+        alpha: params.alpha[deal.parent],
+        dStd: params.dStd[deal.parent],
+        rejectAbove: params.rejectAbove[deal.parent]
+      };
+      deal.alpha = spec.alpha;
+      deal.dStd = spec.dStd;
+      if (deal.defect == null) {
+        deal.standard = deal.price;
+        deal.unrestored = true;
+        deal.note = "未还原：缺少缺陷率，标准价按成交价计入";
+      } else if (deal.defect > spec.rejectAbove) {
+        deal.note = "缺陷率超过 " + formatWeight(spec.rejectAbove) + "，已剔除";
+        rejected.push(deal);
+        dealRows.push({ ...deal, status: "剔除" });
+        return;
+      } else if (1 - spec.alpha * deal.defect <= 0) {
+        deal.note = "缺陷折让后分母小于等于 0，已剔除";
+        rejected.push(deal);
+        dealRows.push({ ...deal, status: "剔除" });
+        return;
+      } else {
+        deal.standard = standardPrice(deal.price, deal.defect, spec.dStd, spec.alpha);
+        deal.note = deal.sourceDefaulted ? "成交方式空缺，按产区收购计入" : "已还原到标准品";
+      }
+      kept.push(deal);
+      dealRows.push(deal);
+    });
+
+    const cellDeals = new Map();
+    for (const deal of kept) {
+      const key = [deal.region, deal.grade, deal.process || ""].join("|");
+      if (!cellDeals.has(key)) cellDeals.set(key, []);
+      cellDeals.get(key).push(deal);
+    }
+    const survivors = [];
+    for (const list of cellDeals.values()) {
+      const auctions = list.filter((d) => d.source === "auction");
+      let ref = null;
+      if (auctions.length >= 2) ref = avg(auctions.map((d) => d.price));
+      else if (auctions.length === 1) {
+        const others = list.filter((d) => d.source !== "auction");
+        if (others.length) ref = avg(others.map((d) => d.price));
+      }
+      for (const deal of list) {
+        if (deal.source === "auction" && ref > 0 && Math.abs(deal.price - ref) / ref > 0.3) {
+          const gap = Math.abs(deal.price - ref) / ref;
+          deal.note = "拍卖价偏离参照均价 " + formatCny(ref) + " 达 " + formatWeight(gap) + "，已剔除";
+          deal.status = "剔除";
+          rejected.push(deal);
+          const shown = dealRows.find((row) => row.index === deal.index && row.status !== "剔除");
+          if (shown) { shown.status = "剔除"; shown.note = deal.note; }
+        } else survivors.push(deal);
+      }
+    }
+
+    const blendedCells = {};
+    const survivorGroups = new Map();
+    for (const deal of survivors) {
+      const key = [deal.region, deal.grade, deal.process || ""].join("|");
+      if (!survivorGroups.has(key)) survivorGroups.set(key, []);
+      survivorGroups.get(key).push(deal);
+    }
+    for (const [key, list] of survivorGroups) {
+      const bySource = {};
+      for (const source of SOURCES) {
+        const rows = list.filter((d) => d.source === source);
+        if (rows.length) bySource[source] = avg(rows.map((d) => d.standard));
+      }
+      const blended = blendSources(bySource, params);
+      const [region, grade, process] = key.split("|");
+      blendedCells[key] = { region, grade, process: process || null, price: blended.price, method: blended.method, parts: blended.parts };
+    }
+
+    const eightMode = survivors.some((d) => PARENT[d.grade]);
+    function exactProcessPrice(region, grade, process) {
+      const cell = blendedCells[[region, grade, process].join("|")];
+      return cell ? cell.price : null;
+    }
+    function acrossProcess(region, grade) {
+      const processed = weighted(PROCESSES.map((p) => ({ code: p, price: exactProcessPrice(region, grade, p), weight: params.processWeight[p] })));
+      const bare = blendedCells[[region, grade, ""].join("|")];
+      if (processed && bare) notes.push(LABEL[region] + LABEL[grade] + " 同时有未填处理法的成交，未填部分未计入。");
+      if (processed) return processed.price;
+      return bare ? bare.price : null;
+    }
+    function observedParentPrice(region, parent) {
+      if (!eightMode) return acrossProcess(region, parent);
+      const collapsed = weighted(childrenOf(parent).map((code) => ({
+        code, price: acrossProcess(region, code), weight: params.grade8Weight[code]
+      })));
+      const generic = acrossProcess(region, parent);
+      if (collapsed && generic != null) notes.push(LABEL[region] + " 的 " + LABEL[parent] + " 同时有 3 级和 8 级成交，已采用 8 级。");
+      if (collapsed) return collapsed.price;
+      return generic;
+    }
+
+    const observed = {};
+    for (const region of REGIONS) {
+      for (const parent of GRADES) {
+        const price = observedParentPrice(region, parent);
+        if (price != null) observed[region + "|" + parent] = price;
+      }
+    }
+
+    const pairDeals = new Map();
+    for (const deal of survivors) {
+      const key = deal.region + "|" + deal.parent;
+      if (!pairDeals.has(key)) pairDeals.set(key, []);
+      pairDeals.get(key).push(deal.price);
+    }
+    for (const [key, prices] of pairDeals) {
+      if (prices.length < 2) continue;
+      const mn = Math.min(...prices);
+      const mx = Math.max(...prices);
+      if (mn > 0 && (mx - mn) / mn > 0.5) {
+        const [region, parent] = key.split("|");
+        reviews.push({ level: "复核", text: LABEL[region] + LABEL[parent] + " 当日成交价相差超过 50%，请人工复核。" });
+      }
+    }
+
+    const cells = {};
+    const fills = [];
+    for (const region of REGIONS) {
+      for (const parent of GRADES) {
+        const key = region + "|" + parent;
+        const prevCell = previous && previous.cells ? previous.cells[key] : null;
+        if (observed[key] != null) {
+          cells[key] = { price: observed[key], streak: 0, origin: "当日" };
+          if (prevCell && prevCell.price > 0 && Math.abs(observed[key] - prevCell.price) / prevCell.price > 0.3) {
+            reviews.push({ level: "复核", text: LABEL[region] + LABEL[parent] + " 较上一发布日变动超过 30%，请人工复核。" });
+          }
+          continue;
+        }
+        if (carryOn && prevCell && (prevCell.price != null || prevCell.streak)) {
+          const streak = (prevCell.streak || 0) + 1;
+          if (streak === 1 && prevCell.price != null) {
+            cells[key] = { price: prevCell.price, streak, origin: "上期延续" };
+            fills.push({ key, origin: "上期延续", price: prevCell.price });
+          } else if (streak <= 3) {
+            const peer = weighted(REGIONS.filter((r) => r !== region).map((r) => ({
+              code: r, price: observed[r + "|" + parent], weight: params.regionWeight[r]
+            })));
+            if (peer) {
+              cells[key] = { price: peer.price, streak, origin: "同类均值" };
+              fills.push({ key, origin: "同类均值", price: peer.price });
+            } else if (prevCell.price != null) {
+              cells[key] = { price: prevCell.price, streak, origin: "上期延续" };
+              fills.push({ key, origin: "上期延续（当日无同类）", price: prevCell.price });
+            } else cells[key] = { price: null, streak, origin: "缺失" };
+          } else cells[key] = { price: null, streak, origin: "停用" };
+        } else cells[key] = { price: null, streak: 0, origin: "缺失" };
+      }
+    }
+
+    function nationalExact(grade) {
+      return weighted(REGIONS.map((region) => ({ code: region, price: acrossProcess(region, grade), weight: params.regionWeight[region] })));
+    }
+    const grades = {};
+    if (eightMode) {
+      for (const parent of GRADES) {
+        grades[parent] = weighted(childrenOf(parent).map((code) => {
+          const national = nationalExact(code);
+          return { code, price: national ? national.price : null, weight: params.grade8Weight[code] };
+        }));
+      }
+    } else {
+      for (const parent of GRADES) {
+        grades[parent] = weighted(REGIONS.map((region) => ({
+          code: region,
+          price: cells[region + "|" + parent].price,
+          weight: params.regionWeight[region]
+        })));
+      }
+    }
+    const gradeComposite = eightMode
+      ? weighted(GRADE8.map((code) => {
+          const national = nationalExact(code);
+          return { code, price: national ? national.price : null, weight: params.grade8Weight[code] };
+        }))
+      : weighted(GRADES.map((grade) => ({ code: grade, price: grades[grade] ? grades[grade].price : null, weight: params.gradeWeight[grade] })));
+
+    const regions = {};
+    for (const region of REGIONS) {
+      regions[region] = weighted(GRADES.map((grade) => ({
+        code: grade,
+        price: cells[region + "|" + grade].price,
+        weight: params.regionGradeWeight[region][grade]
+      })));
+    }
+    const regionComposite = weighted(REGIONS.map((region) => ({
+      code: region,
+      price: regions[region] ? regions[region].price : null,
+      weight: params.regionWeight[region]
+    })));
+
+    function parentProcessPrice(region, parent, process) {
+      if (!eightMode) return exactProcessPrice(region, parent, process);
+      const collapsed = weighted(childrenOf(parent).map((code) => ({
+        code, price: exactProcessPrice(region, code, process), weight: params.grade8Weight[code]
+      })));
+      return collapsed ? collapsed.price : exactProcessPrice(region, parent, process);
+    }
+    const processes = {};
+    for (const process of PROCESSES) {
+      const parts = [];
+      if (eightMode) {
+        for (const region of REGIONS) {
+          for (const code of GRADE8) {
+            parts.push({ code: region + "-" + code, price: exactProcessPrice(region, code, process), weight: params.regionWeight[region] * params.grade8Weight[code] });
+          }
+        }
+      } else {
+        for (const region of REGIONS) {
+          for (const grade of GRADES) {
+            parts.push({ code: region + "-" + grade, price: exactProcessPrice(region, grade, process), weight: params.regionWeight[region] * params.gradeWeight[grade] });
+          }
+        }
+      }
+      processes[process] = weighted(parts);
+    }
+    const processComposite = weighted(PROCESSES.map((process) => ({
+      code: process,
+      price: processes[process] ? processes[process].price : null,
+      weight: params.processWeight[process]
+    })));
+
+    const products = {};
+    for (const grade of GRADES) {
+      for (const process of PROCESSES) {
+        products[grade + "-" + process] = weighted(REGIONS.map((region) => ({
+          code: region,
+          price: parentProcessPrice(region, grade, process),
+          weight: params.regionWeight[region]
+        })));
+      }
+    }
+
+    const ycpiLayer = weighted([
+      { code: "grade", price: gradeComposite ? gradeComposite.price : null, weight: params.layerWeight.grade },
+      { code: "region", price: regionComposite ? regionComposite.price : null, weight: params.layerWeight.region },
+      { code: "process", price: processComposite ? processComposite.price : null, weight: params.layerWeight.process }
+    ]);
+    const ycpi = ycpiLayer ? ycpiLayer.price : null;
+    const fx = input.fx > 0 ? Number(input.fx) : null;
+    const ice = input.ice == null || input.ice === "" || !isFinite(Number(input.ice)) ? null : Number(input.ice);
+    const ycpiUsd = ycpi != null && fx ? ycpi / fx / params.kgPerLb : null;
+    const spread = ycpiUsd != null && ice != null ? ycpiUsd - ice : null;
+    const chain = previous && previous.ycpi > 0 && ycpi != null ? ycpi / previous.ycpi - 1 : null;
+    const year = String(input.date || "").slice(0, 4);
+    const firstThisYear = history.filter((h) => String(h.date).startsWith(year) && h.date < input.date && h.ycpi > 0).sort((a, b) => a.date.localeCompare(b.date))[0];
+    const ytd = firstThisYear && ycpi != null ? ycpi / firstThisYear.ycpi - 1 : null;
+    const ym = String(input.date || "").slice(0, 7);
+    const prevYm = ym.length === 7 ? shiftMonth(ym, -12) : null;
+    const currentMonth = history.filter((h) => String(h.date).startsWith(ym) && h.date !== input.date);
+    if (ycpi != null) currentMonth.push({ ycpi });
+    const prevMonth = prevYm ? history.filter((h) => String(h.date).startsWith(prevYm)) : [];
+    const prevAvg = monthAverage(prevMonth);
+    const curAvg = monthAverage(currentMonth);
+    const yoy = prevAvg && curAvg ? curAvg / prevAvg - 1 : null;
+
+    const observedCells = Object.keys(observed).length;
+    const filledCells = Object.values(cells).filter((c) => c.price != null).length;
+    const valid = survivors.length;
+    const coverage = observedCells / (REGIONS.length * GRADES.length);
+    const completeness = submitted ? valid / submitted : 0;
+    const quality = {
+      submitted, valid, rejected: rejected.length, observedCells, filledCells,
+      coverage, completeness,
+      auctionShare: submitted ? auctionSubmitted / submitted : 0,
+      unrestored: survivors.filter((d) => d.unrestored).length,
+      warning: submitted > 0 && (coverage < 0.8 || completeness < 0.8)
+    };
+    if (gradeComposite && gradeComposite.renormalized) notes.push("等级权重已按当日有报价的等级重新归一。");
+    if (regionComposite && regionComposite.renormalized) notes.push("产区权重已按当日有报价的产区重新归一。");
+    if (processComposite && processComposite.renormalized) notes.push("处理法权重已按当日有报价的处理法重新归一。");
+    if (ycpiLayer && ycpiLayer.renormalized) notes.push("综合价权重已按当日有数的分项重新归一。");
+    if (eightMode) notes.push("当日含 8 级成交：等级综合价按 8 级产量权重合成，产区分项仍按精品 / 优质 / 商业结构合成。");
+
+    const uniqueNotes = [...new Set(notes)];
+    const result = {
+      date: input.date || "",
+      fx, ice, params,
+      eightMode, ycpi, ycpiUsd, spread, chain, yoy, ytd,
+      ycpiLayer, grades, gradeComposite, regions, regionComposite, processes, processComposite, products,
+      cells, fills, quality, rejected, reviews, notes: uniqueNotes, dealRows,
+      samples: Object.values(blendedCells),
+      seasonalAdjustment: null
+    };
+    result.bulletin = makeBulletin(result, previous);
+    return result;
+  }
+  function lineOf(name, node) {
+    return node && node.price != null ? name + "：" + formatCny(node.price) + " 元/公斤" : name + "：—";
+  }
+  function makeBulletin(result, previous) {
+    const lines = [
+      "云南咖啡价格指数 YCPI",
+      "发布日期：" + (result.date || "—"),
+      "方法：直接价格法 v3 · 原始综合价 · 不做季节调整",
+      "",
+      "综合价：" + formatCny(result.ycpi) + " 元/公斤",
+      "环比：" + (result.chain == null ? "暂无上一发布日" : formatChange(result.chain)),
+      "年内累计：" + (result.ytd == null ? "暂无当年更早发布日" : formatChange(result.ytd)),
+      "同比（月均）：" + (result.yoy == null ? "未满 12 个月" : formatChange(result.yoy)),
+      "",
+      "折美元：" + (result.ycpiUsd == null ? "—" : formatUsd(result.ycpiUsd) + " 美元/磅"),
+      "ICE Coffee C：" + (result.ice == null ? "—" : formatUsd(result.ice) + " 美元/磅"),
+      "价差：" + (result.spread == null ? "—" : formatSigned(result.spread, 3) + " 美元/磅"),
+      spreadSentence(result.spread, previous && previous.spread),
+      "",
+      "等级分项"
+    ];
+    for (const grade of GRADES) lines.push(lineOf("YCPI-" + grade + " " + LABEL[grade], result.grades[grade]));
+    lines.push(lineOf("等级合成", result.gradeComposite), "", "产区分项");
+    for (const region of REGIONS) lines.push(lineOf("YCPI-" + region + " " + LABEL[region], result.regions[region]));
+    lines.push(lineOf("产区合成", result.regionComposite), "", "处理法分项");
+    for (const process of PROCESSES) lines.push(lineOf(LABEL[process], result.processes[process]));
+    lines.push(lineOf("处理法合成", result.processComposite), "", "标准品");
+    for (const grade of GRADES) {
+      for (const process of PROCESSES) {
+        const node = result.products[grade + "-" + process];
+        lines.push("A-YN-" + grade + "-" + process + " " + LABEL[grade] + LABEL[process] + "：" + (node ? formatCny(node.price) + " 元/公斤" : "—"));
+      }
+    }
+    lines.push(
+      "",
+      "样本覆盖率：" + formatWeight(result.quality.coverage),
+      "数据完整率：" + formatWeight(result.quality.completeness),
+      "异常剔除率：" + (result.quality.submitted ? formatWeight(result.quality.rejected / result.quality.submitted) : "—"),
+      "拍卖样本占比：" + formatWeight(result.quality.auctionShare)
+    );
+    if (result.quality.warning) lines.push("数据预警：覆盖率或完整率低于 80%，请谨慎使用。");
+    return lines.join("\n");
+  }
+  function spreadSentence(spread, prev) {
+    if (spread == null) return "未填写汇率或 ICE，暂无价差。";
+    let text = spread > 0.0005 ? "云南豆高于 ICE，价差来自品质溢价。" : spread < -0.0005 ? "云南豆低于 ICE，有价格优势。" : "云南豆与 ICE 基本持平。";
+    if (prev != null && isFinite(prev)) {
+      const delta = spread - prev;
+      if (delta < -0.0005) text += "较上一发布日价差缩小，对应竞争力提升。";
+      else if (delta > 0.0005) text += "较上一发布日价差扩大，对应竞争力下降。";
+    }
+    return text;
+  }
+  function assert(cond, msg) { if (!cond) throw new Error(msg); }
+  function close(a, b, eps) {
+    if (!(Math.abs(a - b) < (eps || 1e-6))) throw new Error("期望 " + b + "，实际 " + a);
+  }
+  function selfTest() {
+    close(standardPrice(63, 0.04, 0.03, 1), 63.65625);
+    assert(roundTo(standardPrice(63, 0.04, 0.03, 1), 2) === 63.66, "63 应还原为 63.66");
+    close(dealFromStandard(standardPrice(63, 0.04, 0.03, 1), 0.04, 0.03, 1), 63);
+    assert(roundTo(dealFromStandard(65, 0.04, 0.03, 1), 2) === 64.33, "贸易表 64.33");
+    assert(roundTo(dealFromStandard(65, 0.01, 0.03, 1), 2) === 66.34, "贸易表 66.34");
+    assert(roundTo(dealFromStandard(50, 0.08, 0.05, 0.8), 2) === 48.75, "贸易表 48.75");
+    assert(roundTo(dealFromStandard(40, 0.25, 0.08, 0.5), 2) === 36.46, "贸易表 36.46");
+    const tc = blendSources({ listed: 64, auction: 65.5 }, DEFAULT_PARAMS);
+    close(tc.price, 64.45);
+    const sample = compute({ date: "2026-10-20", fx: 7.2, ice: 3.5, deals: buildSampleDeals(), history: [], previous: null, params: DEFAULT_PARAMS });
+    close(sample.grades.SP.price, 65.715625);
+    assert(roundTo(sample.grades.SP.price, 2) === 65.72, "精品分项应为 65.72");
+    close(sample.grades.PR.price, 54.76);
+    close(sample.grades.CM.price, 40.76);
+    close(sample.gradeComposite.price, 51.0466875);
+    close(sample.regionComposite.price, 50.78368875);
+    close(sample.regions.PE.price, 52.6596875);
+    close(sample.processComposite.price, sample.gradeComposite.price);
+    close(sample.ycpi, 50.9546379375);
+    close(sample.products["SP-WA"].price, sample.grades.SP.price);
+    assert(sample.rejected.length === 1, "应剔除 1 笔拍卖");
+    assert(sample.quality.unrestored === 3, "保山优质应有 3 笔未还原");
+    assert(sample.quality.submitted === 46 && sample.quality.valid === 45, "笔数不符");
+    assert(sample.quality.coverage === 1 && sample.quality.warning === false, "覆盖率应为 100%");
+    const day2deals = buildSampleDeals().filter((d) => !(d.region === "PE" && d.grade === "SP"));
+    const carried = compute({ date: "2026-10-21", fx: 7.2, ice: 3.5, deals: day2deals, previous: sample, history: [sample] });
+    assert(carried.cells["PE|SP"].origin === "上期延续", "应沿用上期");
+    close(carried.cells["PE|SP"].price, sample.cells["PE|SP"].price);
+    const peerPrev = { date: "2026-10-19", ycpi: 50, spread: 0, cells: { "PE|SP": { price: 10, streak: 1, origin: "上期延续" } } };
+    const peer = compute({ date: "2026-10-20", fx: 7.2, ice: 3.5, deals: day2deals, previous: peerPrev, history: [] });
+    assert(peer.cells["PE|SP"].origin === "同类均值", "连续缺失应使用同类均值");
+    close(peer.cells["PE|SP"].price, 67.20689655172414);
+    const eight = compute({
+      date: "2026-10-20", fx: 7.2, ice: 3.5, history: [], previous: null,
+      deals: [
+        { region: "PE", grade: "SP1", process: "WA", source: "purchase", price: 100, defect: 0.03 },
+        { region: "PE", grade: "SP2", process: "WA", source: "purchase", price: 80, defect: 0.03 },
+        { region: "PE", grade: "SP3", process: "WA", source: "purchase", price: 60, defect: 0.03 }
+      ]
+    });
+    close(eight.grades.SP.price, 66);
+    close(eight.ycpi, 66);
+    const mixed = compute({
+      date: "2026-10-20", fx: 7.2, ice: 3.5, history: [], previous: null,
+      deals: [
+        { region: "PE", grade: "SP", process: "WA", source: "purchase", price: 100, defect: 0.03 },
+        { region: "PE", grade: "SP", process: "NA", source: "purchase", price: 50, defect: 0.03 }
+      ]
+    });
+    close(mixed.grades.SP.price, 88.88888888888889);
+    const listedAuction = compute({
+      date: "2026-10-20", fx: 7.2, ice: 3.5, history: [], previous: null,
+      deals: [
+        { region: "PE", grade: "SP", process: "WA", source: "listed", price: 64, defect: 0.03 },
+        { region: "PE", grade: "SP", process: "WA", source: "auction", price: 65.5, defect: 0.03 }
+      ]
+    });
+    close(listedAuction.grades.SP.price, 64.45);
+    const highDefect = compute({ date: "2026-10-20", deals: [{ region: "PE", grade: "SP", process: "WA", source: "purchase", price: 10, defect: 0.31 }], history: [], previous: null });
+    assert(highDefect.rejected.length === 1, "31% 缺陷应剔除");
+    const edge = compute({ date: "2026-10-20", deals: [{ region: "PE", grade: "CM", process: "WA", source: "purchase", price: 10, defect: 0.25 }], history: [], previous: null });
+    assert(edge.quality.valid === 1, "25% 商业缺陷应保留");
+    return sample;
+  }
+
+  globalThis.YCPIEngine = {
+    DEFAULT_PARAMS, REGIONS, GRADES, PROCESSES, SOURCES, GRADE8, LABEL,
+    clone, parseTable, parseDefect, parseNumber, buildSampleDeals, compute, selfTest,
+    standardPrice, dealFromStandard, formatCny, formatUsd, formatSigned, formatChange, formatWeight, roundTo
+  };
+})();
+</script>
+<script>
+(function () {
+  const E = globalThis.YCPIEngine;
+  const STORAGE_KEY = "ycpi-price-tool-v3";
+  const state = {
+    deals: [blankDeal()],
+    result: null,
+    history: [],
+    params: E.clone(E.DEFAULT_PARAMS),
+    trade: { grade: "SP", defect: "4" },
+    storage: true
+  };
+
+  const $ = (id) => document.getElementById(id);
+  function blankDeal() {
+    return { region: "PE", grade: "SP", process: "WA", source: "purchase", price: "", defect: "" };
+  }
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function todayISO() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function defectInput(v) {
+    if (v == null || v === "") return "";
+    if (typeof v === "string") return v;
+    return String(Math.round(v * 100000) / 1000);
+  }
+  function loadStore() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (data.params) state.params = E.clone(data.params);
+      if (Array.isArray(data.history)) state.history = data.history;
+      if (data.draft) {
+        state.deals = data.draft.deals && data.draft.deals.length ? data.draft.deals : [blankDeal()];
+        $("pub-date").value = data.draft.date || todayISO();
+        $("fx").value = data.draft.fx || "";
+        $("ice").value = data.draft.ice || "";
+        $("carry").checked = data.draft.carry !== false;
+        return;
+      }
+    } catch (err) {
+      state.storage = false;
+    }
+    $("pub-date").value = todayISO();
+  }
+  function saveStore() {
+    if (!state.storage) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        params: state.params,
+        history: state.history,
+        draft: {
+          date: $("pub-date").value,
+          fx: $("fx").value,
+          ice: $("ice").value,
+          carry: $("carry").checked,
+          deals: state.deals
+        }
+      }));
+    } catch (err) {
+      state.storage = false;
+      setStatus("浏览器不允许保存本地数据，本次结果只留在当前页面。");
+    }
+  }
+  let saveTimer = 0;
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveStore, 200);
+  }
+  function setStatus(text) { $("status").textContent = text; }
+  function isNarrow() { return window.matchMedia("(max-width: 720px)").matches; }
+  function options(codes, extra) {
+    const head = extra ? '<option value="">' + extra + "</option>" : "";
+    return head + codes.map((code) => '<option value="' + code + '">' + esc(E.LABEL[code]) + "</option>").join("");
+  }
+  function choiceList(codes, extra) {
+    const list = extra ? [{ value: "", label: extra }] : [];
+    return list.concat(codes.map((code) => ({ value: code, label: E.LABEL[code] || code })));
+  }
+  function fieldControl(field, title, codes, value, extra) {
+    const current = value || "";
+    if (!isNarrow()) return '<select data-field="' + field + '">' + options(codes, extra) + "</select>";
+    const found = choiceList(codes, extra).find((item) => item.value === current);
+    return '<button type="button" class="picker-field" data-picker="' + field + '" data-value="' + esc(current) + '">' + esc(found ? found.label : "") + "</button>";
+  }
+  let pickerPick = null;
+  function closePicker() {
+    $("picker").hidden = true;
+    document.body.classList.remove("picker-open");
+    pickerPick = null;
+  }
+  function openPicker(title, choices, value, onPick) {
+    pickerPick = onPick;
+    $("picker-title").textContent = title;
+    $("picker-options").innerHTML = choices.map((item) => (
+      '<button type="button" class="picker-option" data-value="' + esc(item.value) + '" aria-selected="' + (item.value === value ? "true" : "false") + '">' + esc(item.label) + "</button>"
+    )).join("");
+    $("picker").hidden = false;
+    const selected = $("picker-options").querySelector('[aria-selected="true"]');
+    if (selected) selected.scrollIntoView({ block: "nearest" });
+  }
+  function refreshEntrySummary() {
+    const note = $("entry-extra");
+    if (!note) return;
+    const date = $("pub-date").value || "未选日期";
+    const priced = state.deals.filter((deal) => String(deal.price || "").trim() !== "").length;
+    note.textContent = date + " · " + priced + " 笔";
+  }
+  function renderTable() {
+    const grades = E.GRADES.concat(E.GRADE8);
+    $("deal-body").innerHTML = state.deals.map((deal, i) => (
+      "<tr data-index=\"" + i + "\">" +
+      "<td data-label=\"产区\">" + fieldControl("region", "产区", E.REGIONS, deal.region) + "</td>" +
+      "<td data-label=\"等级\">" + fieldControl("grade", "等级", grades, deal.grade) + "</td>" +
+      "<td data-label=\"处理法\">" + fieldControl("process", "处理法", E.PROCESSES, deal.process, "未填") + "</td>" +
+      "<td data-label=\"成交方式\">" + fieldControl("source", "成交方式", E.SOURCES, deal.source) + "</td>" +
+      "<td data-label=\"成交价\"><input data-field=\"price\" inputmode=\"decimal\" value=\"" + esc(deal.price) + "\"></td>" +
+      "<td data-label=\"缺陷率 %\"><input data-field=\"defect\" inputmode=\"decimal\" value=\"" + esc(defectInput(deal.defect)) + "\"></td>" +
+      "<td><button class=\"ghost tiny\" data-remove type=\"button\">删除</button></td></tr>"
+    )).join("");
+    refreshEntrySummary();
+    if (isNarrow()) return;
+    for (const tr of $("deal-body").querySelectorAll("tr")) {
+      const deal = state.deals[Number(tr.dataset.index)];
+      for (const field of ["region", "grade", "process", "source"]) tr.querySelector('[data-field="' + field + '"]').value = deal[field] || "";
+    }
+  }
+  function paramFields() {
+    const p = state.params;
+    const spec = [
+      ["缺陷还原 α", [["alpha.SP", "精品 α", p.alpha.SP, "num"], ["alpha.PR", "优质 α", p.alpha.PR, "num"], ["alpha.CM", "商业 α", p.alpha.CM, "num"]]],
+      ["标准缺陷率 %", [["dStd.SP", "精品", p.dStd.SP], ["dStd.PR", "优质", p.dStd.PR], ["dStd.CM", "商业", p.dStd.CM]]],
+      ["缺陷剔除线 %", [["rejectAbove.SP", "精品 / 优质", p.rejectAbove.SP], ["rejectAbove.PR", "优质", p.rejectAbove.PR], ["rejectAbove.CM", "商业", p.rejectAbove.CM]]],
+      ["分项间权重 %", [["layerWeight.grade", "等级", p.layerWeight.grade], ["layerWeight.region", "产区", p.layerWeight.region], ["layerWeight.process", "处理法", p.layerWeight.process]]],
+      ["等级产量权重 %", [["gradeWeight.SP", "精品", p.gradeWeight.SP], ["gradeWeight.PR", "优质", p.gradeWeight.PR], ["gradeWeight.CM", "商业", p.gradeWeight.CM]]],
+      ["产区产量权重 %", E.REGIONS.map((code) => ["regionWeight." + code, E.LABEL[code], p.regionWeight[code]])],
+      ["处理法产量权重 %", E.PROCESSES.map((code) => ["processWeight." + code, E.LABEL[code], p.processWeight[code]])],
+      ["采集源权重 %", [["sourceWeight.purchase", "产区收购", p.sourceWeight.purchase], ["sourceWeight.listed", "挂牌", p.sourceWeight.listed], ["sourceWeight.auction", "拍卖", p.sourceWeight.auction], ["tcWeight.listed", "仅交易中心时挂牌", p.tcWeight.listed], ["tcWeight.auction", "仅交易中心时拍卖", p.tcWeight.auction]]],
+      ["8 级产量权重 %", E.GRADE8.map((code) => ["grade8Weight." + code, E.LABEL[code], p.grade8Weight[code]])]
+    ];
+    for (const region of E.REGIONS) {
+      spec.push(["产区内等级权重 % · " + E.LABEL[region], E.GRADES.map((grade) => ["regionGradeWeight." + region + "." + grade, E.LABEL[grade], p.regionGradeWeight[region][grade]])]);
+    }
+    $("params").innerHTML = spec.map(([title, fields]) => {
+      const inputs = fields.map(([path, label, value, kind]) => {
+        const shown = kind === "num" ? value : Math.round(value * 10000) / 100;
+        return "<label>" + esc(label) + "<input data-param=\"" + path + "\" data-kind=\"" + (kind || "pct") + "\" value=\"" + shown + "\"></label>";
+      }).join("");
+      return "<h3>" + esc(title) + "</h3>" + inputs;
+    }).join("");
+  }
+  function readParams() {
+    const next = E.clone(E.DEFAULT_PARAMS);
+    for (const input of document.querySelectorAll("[data-param]")) {
+      const n = E.parseNumber(input.value);
+      if (!isFinite(n)) continue;
+      const value = input.dataset.kind === "pct" ? n / 100 : n;
+      const parts = input.dataset.param.split(".");
+      if (parts.length === 2) next[parts[0]][parts[1]] = value;
+      else next[parts[0]][parts[1]][parts[2]] = value;
+    }
+    state.params = next;
+  }
+  function partRows(node, labelOf) {
+    if (!node) return "<tr><td colspan=\"4\">当日没有这一组报价</td></tr>";
+    return node.parts.map((part) => (
+      "<tr><td data-label=\"组成\">" + esc(labelOf(part.code)) + "</td><td class=\"num\" data-label=\"名义权重\">" + E.formatWeight(part.weight) + "</td><td class=\"num\" data-label=\"有效权重\">" + E.formatWeight(part.effectiveWeight) + "</td><td class=\"num\" data-label=\"价格\">" + E.formatCny(part.price) + "</td><td class=\"num\" data-label=\"贡献\">" + E.formatCny(part.contribution) + "</td></tr>"
+    )).join("");
+  }
+  function priceTable(title, node, labelOf) {
+    const head = node && node.renormalized ? " <span class=\"tag\">已重归一</span>" : "";
+    return "<div><h3 class=\"subhead\">" + title + (node ? " · " + E.formatCny(node.price) : "") + head + "</h3><div class=\"table-scroll\"><table class=\"weight-table\"><thead><tr><th>组成</th><th class=\"num\">名义权重</th><th class=\"num\">有效权重</th><th class=\"num\">价格</th><th class=\"num\">贡献</th></tr></thead><tbody>" + partRows(node, labelOf) + "</tbody></table></div></div>";
+  }
+  function updateTrade() {
+    const out = $("trade-out");
+    if (!out || !state.result) return;
+    const grade = $("trade-grade").value;
+    const defect = E.parseDefect($("trade-defect").value);
+    state.trade = { grade, defect: $("trade-defect").value };
+    const node = state.result.grades[grade];
+    const params = state.result.params;
+    if (!node || defect == null || !isFinite(defect) || defect < 0 || defect >= 1) {
+      out.textContent = "输入实际缺陷率后，按标准价反推预期成交价。";
+      return;
+    }
+    const coef = (1 - params.alpha[grade] * defect) / (1 - params.alpha[grade] * params.dStd[grade]);
+    const expected = E.dealFromStandard(node.price, defect, params.dStd[grade], params.alpha[grade]);
+    out.innerHTML = "调整系数 " + E.roundTo(coef, 3).toFixed(3) + "（精确值 " + coef.toFixed(4) + "）<br>预期成交价 <b>" + E.formatCny(expected) + "</b> 元/公斤";
+  }
+  function renderTradeTable() {
+    const presets = { SP: [1, 2, 3, 4, 5], PR: [3, 5, 8, 10, 12], CM: [5, 8, 10, 15, 20, 25] };
+    return E.GRADES.map((grade) => {
+      const node = state.result.grades[grade];
+      if (!node) return "";
+      const params = state.result.params;
+      const rows = presets[grade].map((pct) => {
+        const defect = pct / 100;
+        const coef = (1 - params.alpha[grade] * defect) / (1 - params.alpha[grade] * params.dStd[grade]);
+        const expected = E.dealFromStandard(node.price, defect, params.dStd[grade], params.alpha[grade]);
+        return "<tr><td class=\"num\">" + pct + "%</td><td class=\"num\">" + E.roundTo(coef, 3).toFixed(3) + "</td><td class=\"num\">" + E.formatCny(expected) + "</td></tr>";
+      }).join("");
+      return "<h3 class=\"subhead\">" + E.LABEL[grade] + " · 标准价 " + E.formatCny(node.price) + "</h3><table><thead><tr><th class=\"num\">实际缺陷率</th><th class=\"num\">调整系数</th><th class=\"num\">预期成交价</th></tr></thead><tbody>" + rows + "</tbody></table>";
+    }).join("");
+  }
+  function renderResult(result) {
+    const box = $("result");
+    box.hidden = false;
+    const q = result.quality;
+    const changeClass = result.chain > 0 ? "up" : result.chain < 0 ? "down" : "";
+    const products = E.GRADES.map((grade) => E.PROCESSES.map((process) => {
+      const node = result.products[grade + "-" + process];
+      return "<tr><td>A-YN-" + grade + "-" + process + "</td><td>" + esc(E.LABEL[grade] + " · " + E.LABEL[process]) + "</td><td class=\"num\">" + (node ? E.formatCny(node.price) : "—") + "</td></tr>";
+    }).join("")).join("");
+    const layerBits = (result.ycpiLayer ? result.ycpiLayer.parts : []).map((part) => E.formatWeight(part.effectiveWeight) + " × " + E.formatCny(part.price) + "（" + E.LABEL[part.code] + "）= " + E.formatCny(part.contribution)).join("\n");
+    const usdTrace = result.ycpiUsd == null ? "填写有效汇率后换算美元/磅。" : (
+      E.formatCny(result.ycpi) + " / " + result.fx + " / " + result.params.kgPerLb + " = " + E.formatUsd(result.ycpiUsd) + " 美元/磅" +
+      (result.spread == null ? "" : "\n价差 = " + E.formatUsd(result.ycpiUsd) + " − " + E.formatUsd(result.ice) + " = " + E.formatSigned(result.spread, 3) + " 美元/磅") +
+      (result.fxNote ? "\n" + result.fxNote : "") +
+      (result.iceNote ? "\n" + result.iceNote : "")
+    );
+    const banners = []
+      .concat(q.warning ? ["<div class=\"banner bad\" data-testid=\"warning\">数据预警：样本覆盖率或数据完整率低于 80%，这一期应谨慎使用。</div>"] : [])
+      .concat(result.reviews.map((item) => "<div class=\"banner\">" + esc(item.text) + "</div>"))
+      .concat(result.notes.map((item) => "<div class=\"banner\">" + esc(item) + "</div>"))
+      .concat(result.fills.length ? ["<div class=\"banner\">缺失样本已补齐 " + result.fills.length + " 个：" + esc(result.fills.map((f) => E.LABEL[f.key.slice(0, 2)] + E.LABEL[f.key.slice(3)] + "（" + f.origin + " " + E.formatCny(f.price) + "）").join("、")) + "</div>"] : []);
+    const fold = (title, extra, body) => (
+      "<details class=\"fold\"><summary><span class=\"fold-title\">" + esc(title) + "</span><span class=\"fold-extra\">" + esc(extra || "") + "</span></summary><div class=\"fold-body\">" + body + "</div></details>"
+    );
+    box.innerHTML = (
+      "<h2>发布结果<button class=\"fold-toggle no-print\" id=\"close-result\" type=\"button\">收起</button></h2><p class=\"hint\">" + esc(result.date) + " · 直接价格法 · 未做季节调整</p>" +
+      banners.join("") +
+      "<div class=\"hero\"><div><div class=\"kicker\" style=\"color:var(--muted)\">YCPI 综合价</div><div class=\"hero-price\" data-testid=\"ycpi\">" + E.formatCny(result.ycpi) + "</div><div class=\"unit\">元 / 公斤</div></div>" +
+      "<div class=\"stats\">" +
+      "<div class=\"stat\"><span>环比</span><b class=\"" + changeClass + "\" data-testid=\"chain\">" + (result.chain == null ? "—" : E.formatChange(result.chain)) + "</b></div>" +
+      "<div class=\"stat\"><span>年内累计</span><b>" + (result.ytd == null ? "—" : E.formatChange(result.ytd)) + "</b></div>" +
+      "<div class=\"stat\"><span>同比（月均）</span><b>" + (result.yoy == null ? "—" : E.formatChange(result.yoy)) + "</b></div>" +
+      "<div class=\"stat\"><span>ICE 价差</span><b data-testid=\"spread\">" + (result.spread == null ? "—" : E.formatSigned(result.spread, 3)) + "</b></div>" +
+      "<div class=\"stat\"><span>折美元</span><b>" + (result.ycpiUsd == null ? "—" : E.formatUsd(result.ycpiUsd)) + "</b></div>" +
+      "<div class=\"stat\"><span>精品豆</span><b data-testid=\"grade-sp\">" + E.formatCny(result.grades.SP && result.grades.SP.price) + "</b></div>" +
+      "<div class=\"stat\"><span>优质豆</span><b>" + E.formatCny(result.grades.PR && result.grades.PR.price) + "</b></div>" +
+      "<div class=\"stat\"><span>商业豆</span><b>" + E.formatCny(result.grades.CM && result.grades.CM.price) + "</b></div></div></div>" +
+      "<p class=\"hint\">" + esc(spreadLine(result)) + "</p>" +
+      fold("数据质量", E.formatWeight(q.coverage) + " 覆盖 · " + E.formatWeight(q.completeness) + " 完整",
+        "<div class=\"stats\" data-testid=\"quality\">" +
+        stat("样本覆盖率", E.formatWeight(q.coverage), q.observedCells + " / 15 个产区×等级") +
+        stat("数据完整率", E.formatWeight(q.completeness), q.valid + " / " + q.submitted + " 笔有效") +
+        stat("异常剔除率", q.submitted ? E.formatWeight(q.rejected / q.submitted) : "—", q.rejected + " 笔") +
+        stat("拍卖样本占比", E.formatWeight(q.auctionShare), "未还原 " + q.unrestored + " 笔") +
+        "</div>") +
+      fold("分项与标准品",
+        "等级 " + E.formatCny(result.gradeComposite && result.gradeComposite.price) + " · 产区 " + E.formatCny(result.regionComposite && result.regionComposite.price) + " · 处理法 " + E.formatCny(result.processComposite && result.processComposite.price),
+        "<div class=\"grid-3\">" +
+        priceTable("等级分项", result.gradeComposite, (code) => E.LABEL[code] || code) +
+        priceTable("产区分项", result.regionComposite, (code) => E.LABEL[code] || code) +
+        priceTable("处理法分项", result.processComposite, (code) => E.LABEL[code] || code) +
+        "</div><h3 class=\"subhead\">9 个标准品</h3><div class=\"table-scroll\"><table><thead><tr><th>代码</th><th>标准品</th><th class=\"num\">元/公斤</th></tr></thead><tbody>" + products + "</tbody></table></div>") +
+      fold("六层计算", "综合价 " + E.formatCny(result.ycpi),
+        "<div class=\"formula\">第 1–2 层　单笔成交还原为标准价，个体标准价即该价格。\n第 3 层　同一产区、等级、处理法先按采集源合成样本，再按产量权重得到三个分项。\n第 4 层\n" + esc(layerBits || "没有足够的有效成交。") + "\n综合价 = " + E.formatCny(result.ycpi) + " 元/公斤\n第 5 层　永久不做季节调整，发布的就是上面的原始综合价。\n第 6 层\n" + esc(usdTrace) + "</div>") +
+      fold("分项内部权重", "等级、产区、处理法",
+        "<div class=\"grid-3\">" +
+        priceTable("精品豆", result.grades.SP, (code) => E.LABEL[code] || code) +
+        priceTable("优质豆", result.grades.PR, (code) => E.LABEL[code] || code) +
+        priceTable("商业豆", result.grades.CM, (code) => E.LABEL[code] || code) +
+        E.REGIONS.map((region) => priceTable(E.LABEL[region], result.regions[region], (code) => E.LABEL[code] || code)).join("") +
+        E.PROCESSES.map((process) => priceTable(E.LABEL[process], result.processes[process], (code) => code)).join("") +
+        "</div>") +
+      fold("每笔还原", result.dealRows.length + " 笔",
+        "<div class=\"scroll\"><table class=\"log-table\"><thead><tr><th>产区</th><th>等级</th><th>处理法</th><th>方式</th><th class=\"num\">成交价</th><th class=\"num\">缺陷率</th><th class=\"num\">标准价</th><th>说明</th></tr></thead><tbody>" +
+        result.dealRows.map((row) => "<tr><td data-label=\"产区\">" + esc(E.LABEL[row.region] || row.region) + "</td><td data-label=\"等级\">" + esc(E.LABEL[row.grade] || row.grade) + "</td><td data-label=\"处理法\">" + esc(row.process ? E.LABEL[row.process] : "—") + "</td><td data-label=\"方式\">" + esc(E.LABEL[row.source] || row.source || "—") + "</td><td class=\"num" + (row.status === "剔除" ? " strike" : "") + "\" data-label=\"成交价\">" + esc(row.price || "") + "</td><td class=\"num\" data-label=\"缺陷率\">" + (row.defect == null || !isFinite(row.defect) ? "—" : E.formatWeight(row.defect)) + "</td><td class=\"num\" data-label=\"标准价\">" + (row.standard == null ? "—" : E.formatCny(row.standard)) + "</td><td data-label=\"说明\">" + esc(row.note || "") + "</td></tr>").join("") +
+        "</tbody></table></div>") +
+      fold("贸易折算", "按缺陷率反推成交价",
+        "<p class=\"hint\">预期成交价 = 当日标准价 × (1 − α × 实际缺陷率) / (1 − α × 标准缺陷率)。价格用精确系数；表中的三位小数只便于对照文档。</p>" +
+        "<div class=\"row\"><label>等级" + (isNarrow()
+          ? '<button type="button" class="picker-field" id="trade-grade" data-picker="trade-grade" value="' + esc(state.trade.grade) + '">' + esc(E.LABEL[state.trade.grade] || "") + "</button>"
+          : '<select id="trade-grade">' + E.GRADES.map((grade) => "<option value=\"" + grade + "\">" + E.LABEL[grade] + "</option>").join("") + "</select>") +
+        "</label><label>实际缺陷率 %<input id=\"trade-defect\" value=\"" + esc(state.trade.defect) + "\"></label></div><p id=\"trade-out\" style=\"margin-top:8px\"></p>" +
+        renderTradeTable()) +
+      fold("发布稿", "复制、导出、打印",
+        "<div class=\"actions no-print\"><button class=\"ghost\" id=\"copy-bulletin\" type=\"button\">复制发布稿</button><button class=\"ghost\" id=\"export-day\" type=\"button\">导出当日 CSV</button><button class=\"ghost\" id=\"print\" type=\"button\">打印</button></div>" +
+        "<pre class=\"formula\" id=\"bulletin\">" + esc(result.bulletin) + "</pre>")
+    );
+    $("trade-grade").value = state.trade.grade;
+    updateTrade();
+  }
+  function stat(label, value, note) {
+    return "<div class=\"stat\"><span>" + label + "</span><b>" + value + "</b><span>" + note + "</span></div>";
+  }
+  function spreadLine(result) {
+    if (result.spread == null) return "补上汇率和 ICE Coffee C 后，这里给出美元/磅和价差。";
+    const prev = previousOf(result.date);
+    let text = result.spread > 0.0005 ? "云南豆高于 ICE，价差来自品质溢价。" : result.spread < -0.0005 ? "云南豆低于 ICE，有价格优势。" : "云南豆与 ICE 基本持平。";
+    if (prev && prev.spread != null) {
+      const delta = result.spread - prev.spread;
+      if (delta < -0.0005) text += " 较上一发布日价差缩小，对应竞争力提升。";
+      else if (delta > 0.0005) text += " 较上一发布日价差扩大，对应竞争力下降。";
+    }
+    return text;
+  }
+  function previousOf(date) {
+    return state.history.filter((item) => item.date < date).sort((a, b) => b.date.localeCompare(a.date))[0] || null;
+  }
+  function renderHistory() {
+    const note = $("saved-extra");
+    if (note) note.textContent = state.history.length ? state.history.length + " 期" : "还没有";
+    const rows = [...state.history].sort((a, b) => a.date.localeCompare(b.date));
+    if (!rows.length) {
+      $("history").innerHTML = "<p class=\"hint\">还没有保存的发布日。计算一次之后，这里会留下综合价走势。</p>";
+      return;
+    }
+    const chart = rows.length >= 2 ? renderChart(rows) : "";
+    const viewing = state.result && state.result.date;
+    const body = [...rows].reverse().map((item) => (
+      "<tr" + (item.date === viewing ? " class=\"is-open\"" : "") + "><td data-label=\"发布日\">" + esc(item.date) + "</td><td class=\"num\" data-label=\"综合价\">" + E.formatCny(item.ycpi) + "</td><td class=\"num\" data-label=\"环比\">" + (item.chain == null ? "—" : E.formatChange(item.chain)) + "</td><td class=\"num\" data-label=\"ICE 价差\">" + (item.spread == null ? "—" : E.formatSigned(item.spread, 3)) + "</td><td class=\"num\" data-label=\"覆盖率\">" + E.formatWeight(item.quality.coverage) + "</td><td><button class=\"ghost tiny\" data-open=\"" + esc(item.date) + "\" type=\"button\">查看</button> <button class=\"ghost tiny\" data-drop=\"" + esc(item.date) + "\" type=\"button\">删除</button></td></tr>"
+    )).join("");
+    $("history").innerHTML = chart + "<div class=\"table-scroll\"><table class=\"history-table\"><thead><tr><th>发布日</th><th class=\"num\">综合价</th><th class=\"num\">环比</th><th class=\"num\">ICE 价差</th><th class=\"num\">覆盖率</th><th></th></tr></thead><tbody>" + body + "</tbody></table></div>";
+  }
+  function renderChart(rows) {
+    const narrow = window.matchMedia("(max-width: 720px)").matches;
+    const width = narrow ? 360 : 760;
+    const height = narrow ? 240 : 280;
+    const left = narrow ? 46 : 52;
+    const right = 12;
+    const top = 16;
+    const bottom = narrow ? 32 : 36;
+    const series = [
+      ["YCPI 综合价", "#7c2f27", (r) => r.ycpi],
+      ["精品豆", "#1b6640", (r) => r.grades && r.grades.SP && r.grades.SP.price],
+      ["优质豆", "#8a5610", (r) => r.grades && r.grades.PR && r.grades.PR.price],
+      ["商业豆", "#243e5c", (r) => r.grades && r.grades.CM && r.grades.CM.price]
+    ];
+    const ys = [];
+    for (const row of rows) for (const s of series) { const y = s[2](row); if (y != null && isFinite(y)) ys.push(y); }
+    if (ys.length < 2) return "";
+    let min = Math.min(...ys), max = Math.max(...ys);
+    if (min === max) { min -= 1; max += 1; }
+    const pad = (max - min) * 0.08;
+    min -= pad; max += pad;
+    const x = (i) => left + (rows.length === 1 ? 0 : i * (width - left - right) / (rows.length - 1));
+    const y = (v) => top + (max - v) * (height - top - bottom) / (max - min);
+    const ticks = [0, 1, 2, 3].map((i) => min + (max - min) * i / 3);
+    const grid = ticks.map((t) => "<line x1=\"" + left + "\" x2=\"" + (width - right) + "\" y1=\"" + y(t) + "\" y2=\"" + y(t) + "\" stroke=\"#ddd3c4\"/><text x=\"4\" y=\"" + (y(t) + 4) + "\">" + E.formatCny(t) + "</text>").join("");
+    const paths = series.map(([name, color, get]) => {
+      let d = "", pen = false;
+      rows.forEach((row, i) => {
+        const v = get(row);
+        if (v == null || !isFinite(v)) { pen = false; return; }
+        d += (pen ? "L" : "M") + x(i) + "," + y(v);
+        pen = true;
+      });
+      return "<path d=\"" + d + "\" fill=\"none\" stroke=\"" + color + "\" stroke-width=\"2\"/>";
+    }).join("");
+    const labels = rows.map((row, i) => {
+      if (rows.length > 8 && i !== 0 && i !== rows.length - 1 && i % Math.ceil(rows.length / 6) !== 0) return "";
+      return "<text x=\"" + x(i) + "\" y=\"" + (height - 12) + "\" text-anchor=\"middle\">" + row.date.slice(5) + "</text>";
+    }).join("");
+    const legend = series.map(([name, color]) => "<span><i class=\"swatch\" style=\"background:" + color + "\"></i>" + name + "</span>").join("");
+    return "<h3 class=\"subhead\">已保存发布日的价格</h3><svg viewBox=\"0 0 " + width + " " + height + "\" width=\"100%\" role=\"img\" aria-label=\"YCPI 综合价与等级分项价\">" + grid + paths + labels + "<text x=\"" + left + "\" y=\"12\">元/公斤</text></svg><div class=\"legend\">" + legend + "</div><p class=\"hint\">横轴是发布日期，纵轴是元/公斤。来源是本机已保存的计算结果，未做季节调整。</p>";
+  }
+  function calculate() {
+    readParams();
+    const date = $("pub-date").value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { setStatus("请先选择发布日期。"); return; }
+    const fx = E.parseNumber($("fx").value);
+    const iceRaw = $("ice").value.trim();
+    const ice = iceRaw ? E.parseNumber(iceRaw) : null;
+    const previous = previousOf(date);
+    const history = state.history.filter((item) => item.date !== date);
+    const result = E.compute({
+      date, fx: isFinite(fx) ? fx : null, ice, deals: state.deals,
+      params: state.params, previous, history, carryForward: $("carry").checked
+    });
+    if (result.ycpi == null) {
+      state.result = null;
+      $("result").hidden = true;
+      $("result").innerHTML = "";
+      setStatus("没有足够的有效成交，综合价没有生成，也未保存。");
+      return;
+    }
+    result.deals = E.clone(state.deals);
+    result.fxNote = $("fx-note").textContent;
+    result.iceNote = $("ice-note").textContent;
+    state.history = history.concat(result).sort((a, b) => a.date.localeCompare(b.date));
+    state.result = null;
+    $("result").hidden = true;
+    $("result").innerHTML = "";
+    saveStore();
+    renderHistory();
+    $("entry").open = false;
+    $("saved").open = true;
+    const saved = document.querySelector("#history button[data-open=\"" + date + "\"]");
+    if (saved) saved.closest("tr").scrollIntoView({ behavior: "smooth", block: "center" });
+    setStatus("已保存 " + date + "，综合价 " + E.formatCny(result.ycpi) + " 元/公斤。点这一天的「查看」打开发布结果。");
+  }
+  function download(name, text, type) {
+    const blob = new Blob([text], { type });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  function openHistory(date) {
+    const item = state.history.find((row) => row.date === date);
+    if (!item) return;
+    $("pub-date").value = item.date;
+    $("fx").value = item.fx || "";
+    $("ice").value = item.ice || "";
+    state.deals = item.deals && item.deals.length ? E.clone(item.deals) : [blankDeal()];
+    state.result = item;
+    renderTable();
+    renderHistory();
+    renderResult(item);
+    $("result").scrollIntoView({ behavior: "smooth", block: "start" });
+    setStatus("正在查看 " + date + " 的发布结果。改完成交后请重新计算。");
+  }
+  $("deal-body").addEventListener("input", (e) => {
+    const tr = e.target.closest("tr");
+    if (!tr) return;
+    state.deals[Number(tr.dataset.index)][e.target.dataset.field] = e.target.value;
+    scheduleSave();
+  });
+  const pickerFields = {
+    region: ["产区", () => E.REGIONS],
+    grade: ["等级", () => E.GRADES.concat(E.GRADE8)],
+    process: ["处理法", () => E.PROCESSES, "未填"],
+    source: ["成交方式", () => E.SOURCES]
+  };
+  $("deal-body").addEventListener("click", (e) => {
+    const pick = e.target.closest("[data-picker]");
+    if (pick) {
+      const spec = pickerFields[pick.dataset.picker];
+      const choices = choiceList(spec[1](), spec[2]);
+      openPicker(spec[0], choices, pick.dataset.value || "", (value) => {
+        const chosen = choices.find((item) => item.value === value);
+        state.deals[Number(pick.closest("tr").dataset.index)][pick.dataset.picker] = value;
+        pick.dataset.value = value;
+        pick.textContent = chosen ? chosen.label : "";
+        scheduleSave();
+      });
+      return;
+    }
+    const btn = e.target.closest("[data-remove]");
+    if (!btn) return;
+    state.deals.splice(Number(btn.closest("tr").dataset.index), 1);
+    if (!state.deals.length) state.deals.push(blankDeal());
+    renderTable();
+    scheduleSave();
+  });
+  $("add-row").onclick = () => { state.deals.push(blankDeal()); renderTable(); scheduleSave(); };
+  $("clear-rows").onclick = () => { state.deals = [blankDeal()]; renderTable(); scheduleSave(); setStatus("表格已清空，已保存的发布日还在。"); };
+  $("calc").onclick = calculate;
+  $("calc-mobile").onclick = calculate;
+  let resizeTimer = 0;
+  let wasNarrow = isNarrow();
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const now = isNarrow();
+      if (now !== wasNarrow) {
+        wasNarrow = now;
+        closePicker();
+        renderTable();
+        if (state.result) renderResult(state.result);
+      }
+      if (state.history.length) renderHistory();
+    }, 200);
+  });
+  $("picker-close").onclick = closePicker;
+  $("picker-options").addEventListener("click", (e) => {
+    const option = e.target.closest(".picker-option");
+    if (!option || !pickerPick) return;
+    const pick = pickerPick;
+    closePicker();
+    pick(option.dataset.value);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("picker").hidden) closePicker();
+  });
+  $("toggle-paste").onclick = () => { $("paste-box").hidden = !$("paste-box").hidden; };
+  $("cancel-paste").onclick = () => { $("paste-box").hidden = true; };
+  $("apply-paste").onclick = () => {
+    const parsed = E.parseTable($("paste").value);
+    if (!parsed.deals.length) { setStatus(parsed.errors.join("；") || "没有识别到成交。"); return; }
+    state.deals = parsed.deals;
+    renderTable();
+    $("paste-box").hidden = true;
+    scheduleSave();
+    setStatus("已写入 " + parsed.deals.length + " 行。" + (parsed.errors.length ? parsed.errors.join("；") : ""));
+  };
+  $("import-csv").onclick = () => $("csv-file").click();
+  $("csv-file").onchange = () => {
+    const file = $("csv-file").files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = E.parseTable(String(reader.result || ""));
+      if (parsed.deals.length) {
+        state.deals = parsed.deals;
+        renderTable();
+        scheduleSave();
+      }
+      setStatus(parsed.deals.length ? "已导入 " + parsed.deals.length + " 行。" : "没有导入成交。");
+      if (parsed.errors.length) setStatus($("status").textContent + parsed.errors.join("；"));
+    };
+    reader.readAsText(file, "utf-8");
+    $("csv-file").value = "";
+  };
+  $("template").onclick = () => download("YCPI成交模板.csv", "\uFEFF产区,等级,处理法,成交方式,成交价,缺陷率\n普洱,精品,水洗,产区收购,63,4%\n", "text/csv;charset=utf-8");
+  function shiftISO(iso, days) {
+    const [y, m, d] = iso.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() + days);
+    return dt.toISOString().slice(0, 10);
+  }
+  $("fetch-fx").onclick = async () => {
+    const btn = $("fetch-fx");
+    const note = $("fx-note");
+    const end = /^\d{4}-\d{2}-\d{2}$/.test($("pub-date").value) ? $("pub-date").value : todayISO();
+    const start = shiftISO(end, -20);
+    btn.disabled = true;
+    note.textContent = "正在获取中国外汇交易中心中间价…";
+    try {
+      const url = "https://www.chinamoney.com.cn/ags/ms/cm-u-bk-ccpr/CcprHisNew?startDate=" + start + "&endDate=" + end + "&currency=USD/CNY&pageNum=1&pageSize=20";
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      const records = (data.records || []).filter((row) => row && row.date && row.values && row.values[0] != null);
+      records.sort((a, b) => b.date.localeCompare(a.date));
+      const quote = records.find((row) => row.date <= end) || records[0];
+      const rate = quote ? Number(quote.values[0]) : NaN;
+      if (!(rate > 0)) throw new Error("empty");
+      $("fx").value = rate.toFixed(4);
+      note.textContent = "中国外汇交易中心 USD/CNY 中间价 " + rate.toFixed(4) + "（" + quote.date + "）";
+      scheduleSave();
+    } catch (err) {
+      note.textContent = "没有取到中间价。请检查网络后重试，或直接填写。";
+    }
+    btn.disabled = false;
+  };
+  function loadIceSeries() {
+    return new Promise((resolve, reject) => {
+      const name = "ycpiIceQuote";
+      const prev = document.getElementById("ycpi-ice-script");
+      if (prev) prev.remove();
+      delete window[name];
+      const script = document.createElement("script");
+      script.id = "ycpi-ice-script";
+      script.src = "https://stock2.finance.sina.com.cn/futures/api/jsonp.php/" + name + "=/GlobalFuturesService.getGlobalFuturesDailyKLine?symbol=KC";
+      const timer = setTimeout(() => { script.remove(); delete window[name]; reject(new Error("timeout")); }, 12000);
+      script.onload = () => {
+        clearTimeout(timer);
+        const rows = window[name];
+        script.remove();
+        delete window[name];
+        if (!Array.isArray(rows) || !rows.length) reject(new Error("empty"));
+        else resolve(rows);
+      };
+      script.onerror = () => {
+        clearTimeout(timer);
+        script.remove();
+        delete window[name];
+        reject(new Error("network"));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  $("fetch-ice").onclick = async () => {
+    const btn = $("fetch-ice");
+    const note = $("ice-note");
+    const end = /^\d{4}-\d{2}-\d{2}$/.test($("pub-date").value) ? $("pub-date").value : todayISO();
+    btn.disabled = true;
+    note.textContent = "正在获取 ICE 咖啡 C 收盘价…";
+    try {
+      const rows = await loadIceSeries();
+      const quotes = rows.filter((row) => row && row.date && row.close != null && Number(row.close) > 0);
+      quotes.sort((a, b) => b.date.localeCompare(a.date));
+      const quote = quotes.find((row) => row.date <= end);
+      if (!quote) throw new Error("empty");
+      const cents = Number(quote.close);
+      const usd = cents / 100;
+      $("ice").value = usd.toFixed(3);
+      const gap = quote.date < end ? "。这一发布日还没有收盘，用的是最近交易日" : "";
+      note.textContent = "新浪财经 ICE 咖啡 C 连续合约收盘 " + cents.toFixed(2) + " 美分/磅，合 " + usd.toFixed(3) + " 美元/磅（" + quote.date + "）" + gap;
+      scheduleSave();
+    } catch (err) {
+      note.textContent = "没有取到 ICE 报价。请检查网络后重试，或直接填写。";
+    }
+    btn.disabled = false;
+  };
+  $("fx").addEventListener("input", () => { $("fx-note").textContent = ""; });
+  $("ice").addEventListener("input", () => { $("ice-note").textContent = ""; });
+  $("load-sample").onclick = () => {
+    $("pub-date").value = "2026-10-20";
+    $("fx").value = "7.20";
+    $("fx-note").textContent = "";
+    $("ice").value = "3.50";
+    $("ice-note").textContent = "";
+    $("carry").checked = true;
+    state.deals = E.buildSampleDeals();
+    renderTable();
+    calculate();
+    setStatus("已载入文档示例。精品豆按普洱 63 元、缺陷率 4% 还原后，分项价应为 65.72 元/公斤。点这一天的「查看」打开发布结果。");
+  };
+  $("reset-params").onclick = () => { state.params = E.clone(E.DEFAULT_PARAMS); paramFields(); saveStore(); setStatus("参数已恢复为 v3 文档默认值。"); };
+  $("params").addEventListener("input", () => { readParams(); scheduleSave(); });
+  for (const id of ["pub-date", "fx", "ice", "carry"]) $(id).addEventListener("input", scheduleSave);
+  $("pub-date").addEventListener("input", refreshEntrySummary);
+  window.addEventListener("beforeprint", () => {
+    document.querySelectorAll("#result details.fold").forEach((node) => {
+      node.dataset.wasOpen = node.open ? "1" : "0";
+      node.open = true;
+    });
+  });
+  window.addEventListener("afterprint", () => {
+    document.querySelectorAll("#result details.fold").forEach((node) => {
+      node.open = node.dataset.wasOpen === "1";
+    });
+  });
+  $("result").addEventListener("input", (e) => { if (e.target.id === "trade-grade" || e.target.id === "trade-defect") updateTrade(); });
+  $("result").addEventListener("click", async (e) => {
+    if (e.target.id === "trade-grade" && e.target.dataset.picker) {
+      const choices = choiceList(E.GRADES);
+      openPicker("等级", choices, e.target.value || state.trade.grade, (value) => {
+        state.trade.grade = value;
+        e.target.value = value;
+        e.target.textContent = E.LABEL[value] || "";
+        updateTrade();
+      });
+      return;
+    }
+    if (e.target.id === "close-result") {
+      state.result = null;
+      $("result").hidden = true;
+      $("result").innerHTML = "";
+      renderHistory();
+      setStatus("发布结果已收起。");
+      return;
+    }
+    if (e.target.id === "copy-bulletin") {
+      try { await navigator.clipboard.writeText(state.result.bulletin); setStatus("发布稿已复制。"); }
+      catch (err) { setStatus("复制失败，请直接选中下方发布稿。"); }
+    } else if (e.target.id === "export-day") {
+      download("YCPI-" + state.result.date + ".csv", "\uFEFF" + state.result.bulletin.replace(/\n/g, "\r\n"), "text/csv;charset=utf-8");
+    } else if (e.target.id === "print") window.print();
+  });
+  $("history").addEventListener("click", (e) => {
+    const openBtn = e.target.closest("[data-open]");
+    if (openBtn) openHistory(openBtn.dataset.open);
+    const dropBtn = e.target.closest("[data-drop]");
+    if (dropBtn) {
+      state.history = state.history.filter((item) => item.date !== dropBtn.dataset.drop);
+      if (state.result && state.result.date === dropBtn.dataset.drop) { state.result = null; $("result").hidden = true; $("result").innerHTML = ""; }
+      saveStore();
+      renderHistory();
+    }
+  });
+  $("export-archive").onclick = () => download("YCPI备份.json", JSON.stringify({ version: 1, params: state.params, history: state.history }, null, 2), "application/json");
+  $("import-archive").onclick = () => $("archive-file").click();
+  $("archive-file").onchange = () => {
+    const file = $("archive-file").files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(String(reader.result || ""));
+        const incoming = Array.isArray(data.history) ? data.history : [];
+        const map = new Map(state.history.map((item) => [item.date, item]));
+        for (const item of incoming) if (item && item.date) map.set(item.date, item);
+        state.history = [...map.values()].sort((a, b) => a.date.localeCompare(b.date));
+        if (data.params) state.params = data.params;
+        paramFields();
+        saveStore();
+        renderHistory();
+        setStatus("已合并 " + incoming.length + " 个发布日。同一天以文件为准。");
+      } catch (err) { setStatus("这个文件不是 YCPI 备份。"); }
+    };
+    reader.readAsText(file, "utf-8");
+    $("archive-file").value = "";
+  };
+  $("clear-history").onclick = () => {
+    if (!confirm("清空这台浏览器里的全部 YCPI 发布记录？")) return;
+    state.history = [];
+    state.result = null;
+    $("result").hidden = true;
+    saveStore();
+    renderHistory();
+  };
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") calculate();
+  });
+
+  try {
+    const sample = E.selfTest();
+    $("foot").textContent = "口径自检已通过：63 元还原为 63.66；精品示例 " + E.formatCny(sample.grades.SP.price) + "；综合价 " + E.formatCny(sample.ycpi) + "。数据只保存在这台浏览器。";
+  } catch (err) {
+    $("foot").innerHTML = "<span class=\"banner bad\">口径自检没有通过：" + esc(err.message) + "</span>";
+  }
+  try { localStorage.setItem("__ycpi", "1"); localStorage.removeItem("__ycpi"); }
+  catch (err) { state.storage = false; }
+  loadStore();
+  if (!$("pub-date").value) $("pub-date").value = todayISO();
+  paramFields();
+  renderTable();
+  renderHistory();
+})();
+</script>
+</body>
+</html>
