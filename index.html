@@ -46,16 +46,39 @@
   .panel { background: var(--sheet); border: 1px solid var(--line); padding: 18px; margin-bottom: 16px; }
   .panel h2 { font-size: 22px; margin-bottom: 4px; }
   .hint { color: var(--muted); font-size: 13px; margin: 4px 0 14px; }
-  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
-  .row > label { flex: 1 1 180px; min-width: 0; }
-  .row > label input, .row > label select { width: 100%; max-width: 100%; min-width: 0; }
+  .meta {
+    display: grid;
+    grid-template-columns: minmax(148px, 0.9fr) minmax(220px, 1.2fr) minmax(220px, 1.2fr) auto;
+    gap: 10px 14px;
+    align-items: start;
+  }
+  .meta > label { min-width: 0; }
+  .meta > label > input,
+  .meta > label > select { width: 100%; max-width: 100%; min-width: 0; }
   .fx-line { display: flex; gap: 8px; align-items: stretch; }
-  .row > label .fx-line input { width: auto; flex: 1 1 auto; min-width: 0; }
+  .meta > label .fx-line input { width: auto; flex: 1 1 auto; min-width: 0; }
   .fx-line button { flex: 0 0 auto; white-space: nowrap; }
-  .fx-note { min-height: 1.2em; }
+  .fx-note {
+    display: block;
+    min-height: 0;
+    margin: 2px 0 0;
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+  .fx-note:empty { display: none; }
   label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
-  label.check { flex-direction: row; align-items: center; gap: 8px; min-height: 44px; color: var(--ink); font-size: 15px; }
-  label.check input { width: 18px; height: 18px; margin: 0; }
+  label.check {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    margin-top: 20px;
+    color: var(--ink);
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  label.check input { width: 18px; height: 18px; margin: 0; flex: 0 0 auto; }
   input, select, textarea {
     background: #fffdf8;
     border: 1px solid var(--line);
@@ -214,6 +237,8 @@
     details.panel.fold > .fold-body { padding-bottom: 14px; }
     .hero, .grid-3, .grid-2 { grid-template-columns: 1fr; }
     .stats, .params { grid-template-columns: 1fr 1fr; }
+    .meta { grid-template-columns: 1fr 1fr; }
+    .meta > label.check { grid-column: 1 / -1; margin-top: 4px; white-space: normal; }
     .hero-price { font-size: 56px; }
     .params h3 { margin-top: 12px; }
   }
@@ -226,7 +251,8 @@
     .panel { padding: 12px; }
     details.panel.fold > summary { padding: 14px 12px; }
     details.panel.fold > .fold-body { padding: 0 12px 12px; }
-    .row > label { flex-basis: 100%; }
+    .meta { grid-template-columns: 1fr; }
+    .meta > label.check { margin-top: 2px; min-height: 44px; }
     input, select, textarea { font-size: 16px; }
     .actions { display: grid; grid-template-columns: 1fr 1fr; }
     #calc { display: none; }
@@ -342,15 +368,15 @@
     <summary><span class="fold-title">当日成交</span><span class="fold-extra" id="entry-extra"></span></summary>
     <div class="fold-body">
     <p class="hint">权重按文档里的产量结构，不按当天成交量。等级由你按 DB53/T 149 填写，工具不会用缺陷率自动定级。缺陷率可写 4、4% 或 0.04。</p>
-    <div class="row">
+    <div class="meta">
       <label>发布日期<input id="pub-date" type="date"></label>
       <label>汇率（人民币 / 美元）
         <span class="fx-line"><input id="fx" inputmode="decimal" placeholder="7.20"><button class="ghost" id="fetch-fx" type="button">取中间价</button></span>
-        <span class="fx-note hint" id="fx-note"></span>
+        <span class="fx-note" id="fx-note"></span>
       </label>
       <label>ICE Coffee C（美元 / 磅）
         <span class="fx-line"><input id="ice" inputmode="decimal" placeholder="3.50"><button class="ghost" id="fetch-ice" type="button">取报价</button></span>
-        <span class="fx-note hint" id="ice-note"></span>
+        <span class="fx-note" id="ice-note"></span>
       </label>
       <label class="check"><input id="carry" type="checkbox" checked> 缺失样本按文档补齐</label>
     </div>
