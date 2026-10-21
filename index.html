@@ -363,7 +363,10 @@
   html[data-page="view"] #entry,
   html[data-page="view"] .mobile-bar,
   html[data-page="view"] .entry-only { display: none !important; }
-  html[data-page="entry"] #saved { display: none !important; }
+  html[data-page="entry"] #saved,
+  html[data-page="entry"] #params-panel,
+  html[data-page="entry"] #method-panel,
+  html[data-page="entry"] #foot { display: none !important; }
   html[data-page="view"] main { padding-bottom: 28px; }
   a.quiet { color: var(--accent); }
 </style>
@@ -378,7 +381,7 @@
   <details class="panel fold no-print" id="entry" open>
     <summary><span class="fold-title">当日成交</span><span class="fold-extra" id="entry-extra"></span></summary>
     <div class="fold-body">
-    <p class="hint">权重按文档里的产量结构，不按当天成交量。等级由你按 DB53/T 149 填写，工具不会用缺陷率自动定级。缺陷率可写 4、4% 或 0.04。提交后到 <a class="quiet" href="https://cxl19910724.github.io/ycpi/">展示页</a> 查看。</p>
+    <p class="hint">权重按文档里的产量结构，不按当天成交量。等级由你按 DB53/T 149 填写。缺陷率可不填；不填时标准价按成交价计入。有缺陷率时写 4、4% 或 0.04。提交后到 <a class="quiet" href="https://cxl19910724.github.io/ycpi/">展示页</a> 查看。</p>
     <div class="meta">
       <label>发布日期<input id="pub-date" type="date"></label>
       <label>汇率（人民币 / 美元）<input id="fx" inputmode="decimal" placeholder="7.20"></label>
@@ -407,7 +410,7 @@
         <thead>
           <tr>
             <th>产区</th><th>等级</th><th>处理法</th>
-            <th class="num">成交价</th><th class="num">缺陷率 %</th><th></th>
+            <th class="num">成交价</th><th class="num">缺陷率 %（可不填）</th><th></th>
           </tr>
         </thead>
         <tbody id="deal-body"></tbody>
@@ -419,13 +422,6 @@
       <summary>让别人打开链接也能看到</summary>
       <p class="hint">同一台手机或电脑上，提交后打开展示页就能看到。别人的手机要看到，需要在这里填一次 GitHub 个人访问令牌，权限只勾这个仓库的 Contents 读写。口令只留在这台浏览器里，不会出现在展示页。</p>
       <label>发布口令<input id="publish-token" type="password" autocomplete="off" placeholder="github_pat_…"></label>
-    </details>
-    <details>
-      <summary>年度参数（默认取自 v3 文档，可改）</summary>
-      <div class="params" id="params"></div>
-      <div class="actions">
-        <button class="ghost" id="reset-params" type="button">恢复文档默认</button>
-      </div>
     </details>
   </div>
   </details>
@@ -446,7 +442,15 @@
 
   <section class="panel" id="result" hidden></section>
 
-  <details class="panel entry-only">
+  <details class="panel" id="params-panel">
+    <summary>年度参数（默认取自 v3 文档，可改）</summary>
+    <div class="params" id="params"></div>
+    <div class="actions">
+      <button class="ghost" id="reset-params" type="button">恢复文档默认</button>
+    </div>
+  </details>
+
+  <details class="panel" id="method-panel">
     <summary>方法摘要与产季背景（不进入每日发布）</summary>
     <div class="formula" style="margin-top:12px">第 1 层  标准价 = 成交价 × (1 − α × 标准缺陷率) / (1 − α × 实际缺陷率)
 第 2 层  个体标准价 = 标准价（元/公斤，不除基期）
@@ -1420,7 +1424,7 @@
       "<td data-label=\"等级\">" + fieldControl("grade", "等级", grades, deal.grade) + "</td>" +
       "<td class=\"wide\" data-label=\"处理法\">" + choiceRow("process", E.PROCESSES, deal.process) + "</td>" +
       "<td data-label=\"成交价\"><input data-field=\"price\" inputmode=\"decimal\" value=\"" + esc(deal.price) + "\"></td>" +
-      "<td data-label=\"缺陷率 %\"><input data-field=\"defect\" inputmode=\"decimal\" value=\"" + esc(defectInput(deal.defect)) + "\"></td>" +
+      "<td data-label=\"缺陷率 %（可不填）\"><input data-field=\"defect\" inputmode=\"decimal\" value=\"" + esc(defectInput(deal.defect)) + "\" placeholder=\"可不填\"></td>" +
       "<td><button class=\"ghost tiny\" data-remove type=\"button\">删除</button></td></tr>"
     )).join("");
     refreshEntrySummary();
