@@ -90,6 +90,20 @@
   .table-scroll { -webkit-overflow-scrolling: touch; }
   .scroll table { background: #fffdf8; }
   .entry-table select, .entry-table input { width: 100%; min-width: 88px; padding: 6px 8px; }
+  .choice-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  button.choice {
+    border: 1px solid var(--line);
+    background: #fffdf8;
+    color: var(--ink);
+    border-radius: 2px;
+    padding: 6px 10px;
+    line-height: 1.3;
+  }
+  button.choice[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fffaf6;
+  }
   .hero { display: grid; grid-template-columns: minmax(220px, 1.1fr) 2fr; gap: 18px; align-items: start; }
   .hero-price { font-family: var(--serif); font-size: 68px; line-height: 0.9; letter-spacing: -0.04em; }
   .unit { color: var(--muted); margin-top: 6px; }
@@ -279,9 +293,11 @@
       color: var(--muted);
       font-size: 12px;
     }
+    .entry-table td.wide { grid-column: 1 / -1; }
     .entry-table td:last-child { grid-column: 1 / -1; }
     .entry-table td:last-child::before { content: none; }
     .entry-table select, .entry-table input { min-width: 0; min-height: 44px; }
+    button.choice { min-height: 40px; font-size: 15px; }
     .entry-table .tiny { width: 100%; min-height: 40px; font-size: 14px; }
     .weight-table thead, .log-table thead, .history-table thead { display: none; }
     .weight-table, .weight-table tbody, .log-table, .log-table tbody, .history-table, .history-table tbody { display: block; }
@@ -390,7 +406,7 @@
       <table class="entry-table">
         <thead>
           <tr>
-            <th>产区</th><th>等级</th><th>处理法</th><th>成交方式</th>
+            <th>产区</th><th>等级</th><th>处理法</th>
             <th class="num">成交价</th><th class="num">缺陷率 %</th><th></th>
           </tr>
         </thead>
@@ -1362,6 +1378,11 @@
     const list = extra ? [{ value: "", label: extra }] : [];
     return list.concat(codes.map((code) => ({ value: code, label: E.LABEL[code] || code })));
   }
+  function choiceRow(field, codes, value) {
+    return '<div class="choice-row">' + codes.map((code) => (
+      '<button type="button" class="choice" data-choice="' + field + '" data-value="' + code + '" aria-pressed="' + (code === value ? "true" : "false") + '">' + esc(E.LABEL[code]) + "</button>"
+    )).join("") + "</div>";
+  }
   function fieldControl(field, title, codes, value, extra) {
     const current = value || "";
     if (!isNarrow()) return '<select data-field="' + field + '">' + options(codes, extra) + "</select>";
@@ -1395,10 +1416,9 @@
     const grades = E.GRADES.concat(E.GRADE8);
     $("deal-body").innerHTML = state.deals.map((deal, i) => (
       "<tr data-index=\"" + i + "\">" +
-      "<td data-label=\"产区\">" + fieldControl("region", "产区", E.REGIONS, deal.region) + "</td>" +
+      "<td class=\"wide\" data-label=\"产区\">" + choiceRow("region", E.REGIONS, deal.region) + "</td>" +
       "<td data-label=\"等级\">" + fieldControl("grade", "等级", grades, deal.grade) + "</td>" +
-      "<td data-label=\"处理法\">" + fieldControl("process", "处理法", E.PROCESSES, deal.process, "未填") + "</td>" +
-      "<td data-label=\"成交方式\">" + fieldControl("source", "成交方式", E.SOURCES, deal.source) + "</td>" +
+      "<td class=\"wide\" data-label=\"处理法\">" + choiceRow("process", E.PROCESSES, deal.process) + "</td>" +
       "<td data-label=\"成交价\"><input data-field=\"price\" inputmode=\"decimal\" value=\"" + esc(deal.price) + "\"></td>" +
       "<td data-label=\"缺陷率 %\"><input data-field=\"defect\" inputmode=\"decimal\" value=\"" + esc(defectInput(deal.defect)) + "\"></td>" +
       "<td><button class=\"ghost tiny\" data-remove type=\"button\">删除</button></td></tr>"
@@ -1407,7 +1427,8 @@
     if (isNarrow()) return;
     for (const tr of $("deal-body").querySelectorAll("tr")) {
       const deal = state.deals[Number(tr.dataset.index)];
-      for (const field of ["region", "grade", "process", "source"]) tr.querySelector('[data-field="' + field + '"]').value = deal[field] || "";
+      const grade = tr.querySelector('[data-field="grade"]');
+      if (grade) grade.value = deal.grade || "";
     }
   }
   function paramFields() {
@@ -1653,6 +1674,7 @@
     const ice = iceRaw ? E.parseNumber(iceRaw) : null;
     const previous = previousOf(date);
     const history = state.history.filter((item) => item.date !== date);
+    for (const deal of state.deals) deal.source = "purchase";
     const result = E.compute({
       date, fx: isFinite(fx) ? fx : null, ice, deals: state.deals,
       params: state.params, previous, history, carryForward: $("carry").checked
@@ -1727,12 +1749,19 @@
     scheduleSave();
   });
   const pickerFields = {
-    region: ["产区", () => E.REGIONS],
-    grade: ["等级", () => E.GRADES.concat(E.GRADE8)],
-    process: ["处理法", () => E.PROCESSES, "未填"],
-    source: ["成交方式", () => E.SOURCES]
+    grade: ["等级", () => E.GRADES.concat(E.GRADE8)]
   };
   $("deal-body").addEventListener("click", (e) => {
+    const choice = e.target.closest("[data-choice]");
+    if (choice) {
+      const tr = choice.closest("tr");
+      state.deals[Number(tr.dataset.index)][choice.dataset.choice] = choice.dataset.value;
+      for (const button of choice.parentElement.querySelectorAll("[data-choice]")) {
+        button.setAttribute("aria-pressed", button === choice ? "true" : "false");
+      }
+      scheduleSave();
+      return;
+    }
     const pick = e.target.closest("[data-picker]");
     if (pick) {
       const spec = pickerFields[pick.dataset.picker];
