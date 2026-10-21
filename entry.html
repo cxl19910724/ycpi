@@ -55,18 +55,6 @@
   .meta > label { min-width: 0; }
   .meta > label > input,
   .meta > label > select { width: 100%; max-width: 100%; min-width: 0; }
-  .fx-line { display: flex; gap: 8px; align-items: stretch; }
-  .meta > label .fx-line input { width: auto; flex: 1 1 auto; min-width: 0; }
-  .fx-line button { flex: 0 0 auto; white-space: nowrap; }
-  .fx-note {
-    display: block;
-    min-height: 0;
-    margin: 2px 0 0;
-    font-size: 12px;
-    line-height: 1.35;
-    color: var(--muted);
-  }
-  .fx-note:empty { display: none; }
   label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
   label.check {
     flex-direction: row;
@@ -376,14 +364,8 @@
     <p class="hint">权重按文档里的产量结构，不按当天成交量。等级由你按 DB53/T 149 填写，工具不会用缺陷率自动定级。缺陷率可写 4、4% 或 0.04。提交后到 <a class="quiet" href="https://cxl19910724.github.io/ycpi/">展示页</a> 查看。</p>
     <div class="meta">
       <label>发布日期<input id="pub-date" type="date"></label>
-      <label>汇率（人民币 / 美元）
-        <span class="fx-line"><input id="fx" inputmode="decimal" placeholder="7.20"><button class="ghost" id="fetch-fx" type="button">取中间价</button></span>
-        <span class="fx-note" id="fx-note"></span>
-      </label>
-      <label>ICE Coffee C（美元 / 磅）
-        <span class="fx-line"><input id="ice" inputmode="decimal" placeholder="3.50"><button class="ghost" id="fetch-ice" type="button">取报价</button></span>
-        <span class="fx-note" id="ice-note"></span>
-      </label>
+      <label>汇率（人民币 / 美元）<input id="fx" inputmode="decimal" placeholder="7.20"></label>
+      <label>ICE Coffee C（美元 / 磅）<input id="ice" inputmode="decimal" placeholder="3.50"></label>
       <label class="check"><input id="carry" type="checkbox" checked> 缺失样本按文档补齐</label>
     </div>
     <div class="actions">
@@ -1682,8 +1664,8 @@
       return;
     }
     result.deals = E.clone(state.deals);
-    result.fxNote = $("fx-note").textContent;
-    result.iceNote = $("ice-note").textContent;
+    result.fxNote = "";
+    result.iceNote = "";
     result.savedAt = new Date().toISOString();
     state.history = history.concat(result).sort((a, b) => a.date.localeCompare(b.date));
     state.result = null;
@@ -1721,8 +1703,6 @@
       $("pub-date").value = item.date;
       $("fx").value = item.fx || "";
       $("ice").value = item.ice || "";
-      $("fx-note").textContent = item.fxNote || "";
-      $("ice-note").textContent = item.iceNote || "";
       state.deals = item.deals && item.deals.length ? E.clone(item.deals) : [blankDeal()];
       state.result = null;
       $("result").hidden = true;
@@ -1835,95 +1815,10 @@
     $("csv-file").value = "";
   };
   $("template").onclick = () => download("YCPI成交模板.csv", "\uFEFF产区,等级,处理法,成交方式,成交价,缺陷率\n普洱,精品,水洗,产区收购,63,4%\n", "text/csv;charset=utf-8");
-  function shiftISO(iso, days) {
-    const [y, m, d] = iso.split("-").map(Number);
-    const dt = new Date(Date.UTC(y, m - 1, d));
-    dt.setUTCDate(dt.getUTCDate() + days);
-    return dt.toISOString().slice(0, 10);
-  }
-  $("fetch-fx").onclick = async () => {
-    const btn = $("fetch-fx");
-    const note = $("fx-note");
-    const end = /^\d{4}-\d{2}-\d{2}$/.test($("pub-date").value) ? $("pub-date").value : todayISO();
-    const start = shiftISO(end, -20);
-    btn.disabled = true;
-    note.textContent = "正在获取中国外汇交易中心中间价…";
-    try {
-      const url = "https://www.chinamoney.com.cn/ags/ms/cm-u-bk-ccpr/CcprHisNew?startDate=" + start + "&endDate=" + end + "&currency=USD/CNY&pageNum=1&pageSize=20";
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(String(res.status));
-      const data = await res.json();
-      const records = (data.records || []).filter((row) => row && row.date && row.values && row.values[0] != null);
-      records.sort((a, b) => b.date.localeCompare(a.date));
-      const quote = records.find((row) => row.date <= end) || records[0];
-      const rate = quote ? Number(quote.values[0]) : NaN;
-      if (!(rate > 0)) throw new Error("empty");
-      $("fx").value = rate.toFixed(4);
-      note.textContent = "中国外汇交易中心 USD/CNY 中间价 " + rate.toFixed(4) + "（" + quote.date + "）";
-      scheduleSave();
-    } catch (err) {
-      note.textContent = "没有取到中间价。请检查网络后重试，或直接填写。";
-    }
-    btn.disabled = false;
-  };
-  function loadIceSeries() {
-    return new Promise((resolve, reject) => {
-      const name = "ycpiIceQuote";
-      const prev = document.getElementById("ycpi-ice-script");
-      if (prev) prev.remove();
-      delete window[name];
-      const script = document.createElement("script");
-      script.id = "ycpi-ice-script";
-      script.src = "https://stock2.finance.sina.com.cn/futures/api/jsonp.php/" + name + "=/GlobalFuturesService.getGlobalFuturesDailyKLine?symbol=KC";
-      const timer = setTimeout(() => { script.remove(); delete window[name]; reject(new Error("timeout")); }, 12000);
-      script.onload = () => {
-        clearTimeout(timer);
-        const rows = window[name];
-        script.remove();
-        delete window[name];
-        if (!Array.isArray(rows) || !rows.length) reject(new Error("empty"));
-        else resolve(rows);
-      };
-      script.onerror = () => {
-        clearTimeout(timer);
-        script.remove();
-        delete window[name];
-        reject(new Error("network"));
-      };
-      document.head.appendChild(script);
-    });
-  }
-  $("fetch-ice").onclick = async () => {
-    const btn = $("fetch-ice");
-    const note = $("ice-note");
-    const end = /^\d{4}-\d{2}-\d{2}$/.test($("pub-date").value) ? $("pub-date").value : todayISO();
-    btn.disabled = true;
-    note.textContent = "正在获取 ICE 咖啡 C 收盘价…";
-    try {
-      const rows = await loadIceSeries();
-      const quotes = rows.filter((row) => row && row.date && row.close != null && Number(row.close) > 0);
-      quotes.sort((a, b) => b.date.localeCompare(a.date));
-      const quote = quotes.find((row) => row.date <= end);
-      if (!quote) throw new Error("empty");
-      const cents = Number(quote.close);
-      const usd = cents / 100;
-      $("ice").value = usd.toFixed(3);
-      const gap = quote.date < end ? "。这一发布日还没有收盘，用的是最近交易日" : "";
-      note.textContent = "新浪财经 ICE 咖啡 C 连续合约收盘 " + cents.toFixed(2) + " 美分/磅，合 " + usd.toFixed(3) + " 美元/磅（" + quote.date + "）" + gap;
-      scheduleSave();
-    } catch (err) {
-      note.textContent = "没有取到 ICE 报价。请检查网络后重试，或直接填写。";
-    }
-    btn.disabled = false;
-  };
-  $("fx").addEventListener("input", () => { $("fx-note").textContent = ""; });
-  $("ice").addEventListener("input", () => { $("ice-note").textContent = ""; });
   $("load-sample").onclick = () => {
     $("pub-date").value = "2026-10-20";
     $("fx").value = "7.20";
-    $("fx-note").textContent = "";
     $("ice").value = "3.50";
-    $("ice-note").textContent = "";
     $("carry").checked = true;
     state.deals = E.buildSampleDeals();
     renderTable();
