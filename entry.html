@@ -90,6 +90,7 @@
   .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
   button.primary { background: var(--accent); color: #fffaf6; border: 1px solid var(--accent); padding: 9px 14px; border-radius: 2px; }
   button.ghost { background: transparent; border: 1px solid var(--line); padding: 8px 12px; border-radius: 2px; }
+  button[hidden] { display: none !important; }
   .history-table tr.is-open td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
   .status { min-height: 1.4em; color: var(--info); font-size: 13px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -387,11 +388,11 @@
     </div>
     <div class="actions">
       <button class="primary" id="calc" type="button">提交</button>
-      <button class="ghost" id="load-sample" type="button">载入文档示例</button>
+      <button class="ghost" id="load-sample" type="button" hidden>载入文档示例</button>
       <button class="ghost" id="add-row" type="button">添加一行</button>
-      <button class="ghost" id="toggle-paste" type="button">粘贴表格</button>
-      <button class="ghost" id="import-csv" type="button">导入 CSV</button>
-      <button class="ghost" id="template" type="button">下载模板</button>
+      <button class="ghost" id="toggle-paste" type="button" hidden>粘贴表格</button>
+      <button class="ghost" id="import-csv" type="button" hidden>导入 CSV</button>
+      <button class="ghost" id="template" type="button" hidden>下载模板</button>
       <button class="ghost" id="clear-rows" type="button">清空表格</button>
       <input id="csv-file" type="file" accept=".csv,text/csv" hidden>
     </div>
